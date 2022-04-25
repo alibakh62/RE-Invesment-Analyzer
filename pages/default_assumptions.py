@@ -10,112 +10,91 @@ sys.path.insert(0, '..')
 with open('data/user_assumptions_test.json', 'r') as f:
     user_assumptions = json.load(f)
 
-core_assumptions = {
-    "Monthly Gross Rent ($/mo)": user_assumptions["monthly_gross_rent"],
-    "Purchase Price ($)": user_assumptions["purchase_price"],
-    # "Purchase Date": datetime.strptime(user_assumptions["purchase_date"], '%Y-%m-%d'),  #TODO: handle this
-    "Closing Costs ($)": user_assumptions["closing_costs"],
-    "Extra Cash Reserves ($)": user_assumptions["extra_cash_reserves"],
-}
-
-renovations = {
-    "Initial Renovation Cost ($)": user_assumptions["renovation_costs"],
-    "Renovation Period (months)": user_assumptions["renovation_period"],
-    "Exit Renovation Cost ($)": user_assumptions["exit_renovation_cost"],
-    "Total Project Cost ($)": user_assumptions["purchase_price"] + user_assumptions["closing_costs"] + user_assumptions["renovation_period"] + user_assumptions["exit_renovation_cost"], 
-}
-
-financial_assumptions = {
-    "Equity % of Total Project Cost": user_assumptions['eqt_pct'],
-    "Total Project Loan Amount ($)": np.round((1 - user_assumptions['eqt_pct'])*(user_assumptions["purchase_price"] + user_assumptions["closing_costs"] + user_assumptions["renovation_period"] + user_assumptions["exit_renovation_cost"]), 0),  # calculated
-    "Amortization Period (years)": user_assumptions['amort_period'],
-    "Interest Rate (%) on Debt": user_assumptions['int_rate_on_debt'],
-}
-
-exit_assumptions = {
-    "Length of Hold (years)": user_assumptions['length_hold'],
-    "Appreciation Rate (%/year)": user_assumptions['appr_rate'],
-    "Sales Price at Exit ($)": user_assumptions['sales_price_at_exit'],  # calculated
-    "Cost of Sale (%)": user_assumptions['cost_of_sale'],
-}
-
-other_assumptions = {
-    "Vacancy Rate (%/year)": user_assumptions['vacancy_rate'],
-    "Rent Growth Rate (%/year)": user_assumptions['rent_growth_rate'],
-    "Repairs and Maintenance (%/month)": user_assumptions['repairs'],
-    "Property Taxes ($/year)": user_assumptions['property_taxes'],
-    "Insurance ($/year)": user_assumptions['insurance'],
-    "Utilities ($/month)": user_assumptions['utilities'],
-    "Property Management Fees (%/month)": user_assumptions['property_manager_fee'],
-    "Discount Rate (%)": user_assumptions['discount_rate'],
-}
-
 def app():
     """
-    This is the main analysis page.
+    In this page, user can see the default assumptions for the project.
     """
-    st.markdown("<h1 style='text-align: center; color: black;'>Assumption Review</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: grey;'>Review the assumptions below and click the 'Submit' button to continue.</p>", unsafe_allow_html=True)
-    # st.title("Review Your Assumptions")
-    # st.write("Review the assumptions below and click the 'Submit' button to continue.")
-    # col1, col2, col3, col4, col5 = st.columns(5)
+    st.markdown("<h1 style='text-align: center; color: black;'>Default Investment Assumptions</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: grey;'>You can change any of assumptions. Hit the Submit button to save the defaults.</p>", unsafe_allow_html=True)
 
     with st.container():
-        col1, col2, col3 = st.columns([2,1,2])
-        with col1:
-            st.subheader("Core Deal Assumptions")
-            st.dataframe(pd.DataFrame.from_dict(core_assumptions, orient='index'))
-
-        with col2:
+        c1, c2, c3 = st.columns([2,1,2])
+        c1.markdown("<h3 style='text-align: center; color: black;'>Financing</h3>", unsafe_allow_html=True)
+        # c2.markdown("<h3 style='text-align: center; color: black;'>Renovation Assumptions</h3>", unsafe_allow_html=True)
+        c3.markdown("<h3 style='text-align: center; color: black;'>Renovation Costs</h3>", unsafe_allow_html=True)
+        with c1:
+            with st.form("Financing"):
+                extra_cash_reserves = st.number_input("Extra Cash Reserves", value=2500, step=1_000, help="Typically 1-2% of purchase price")
+                eqt_pct = st.number_input("Equity % of Total Project Cost", value=0.5)
+                amort_period = st.number_input("Amortization Period (years)", value=30, step=1)
+                int_rate_on_debt = st.number_input("Interest Rate (%) on Debt", value=0.05)
+                submitted_financing = st.form_submit_button("Submit")
+                if submitted_financing:
+                    user_assumptions['extra_cash_reserves'] = extra_cash_reserves
+                    user_assumptions['eqt_pct'] = eqt_pct
+                    user_assumptions['amort_period'] = amort_period
+                    user_assumptions['int_rate_on_debt'] = int_rate_on_debt
+                    # with open('data/user_assumptions_test.json', 'w') as f:
+                    #     json.dump(user_assumptions, f)
+                    # st.success("Financing Assumptions Updated")
+        with c2:
             st.write('')
-
-        with col3:
-            st.subheader("Renovations")
-            st.dataframe(pd.DataFrame.from_dict(renovations, orient='index'))
-
-    with st.container():
-        col4, col5, col6 = st.columns([2,1,2])
-        with col4:
-            st.subheader("Financing Related")
-            st.table(pd.DataFrame.from_dict(financial_assumptions, orient='index'))
+        with c3:
+            with st.form("Renovation Costs"):
+                renovation_costs = st.number_input("Renovation Costs", value=10_000, step=1_000)
+                renovation_period = st.number_input("Renovation Period (months)", value=4, step=1)
+                exit_renovation_cost = st.number_input("Exit Renovation Costs", value=5_000, step=1_000)
+                submitted_renov = st.form_submit_button("Submit")
+                if submitted_renov:
+                    user_assumptions['renovation_costs'] = renovation_costs
+                    user_assumptions['renovation_period'] = renovation_period
+                    user_assumptions['exit_renovation_cost'] = exit_renovation_cost
+                    # with open('data/user_assumptions_test.json', 'w') as f:
+                    #     json.dump(user_assumptions, f)
+                    # st.success("Renovation Assumptions Updated")
         
-        with col5:
-            st.write('')
-
-        with col6:
-            st.subheader("Exit Assumptions")
-            st.table(pd.DataFrame.from_dict(exit_assumptions, orient='index'))
-
-        with st.container():
-            col7, col8, col9 = st.columns([1,2,1])	
-            with col7:
-                st.write('')
-            with col8:
-                st.subheader("Other Assumptions")
-                st.table(pd.DataFrame.from_dict(other_assumptions, orient='index'))
-            with col9:
-                st.write('')
-
     with st.container():
-        col10, col11, col12 = st.columns(3)	
-        with col10:
+        c1, c2, c3 = st.columns([2,1,2])
+        c1.markdown("<h3 style='text-align: center; color: black;'>Exit</h3>", unsafe_allow_html=True)
+        # c2.markdown("<h3 style='text-align: center; color: black;'>Rental Growth</h3>", unsafe_allow_html=True)
+        c3.markdown("<h3 style='text-align: center; color: black;'>Other</h3>", unsafe_allow_html=True)
+        with c1:
+            with st.form("Exit"):
+                length_hold = st.number_input("Length of Hold (years)", value=7, step=1)
+                appr_rate = st.number_input("Appreciation Rate (%/year)", value=0.05)
+                # sales_price_at_exit = st.number_input("Sales Price at Exit ($)", value=int(default_values["sales_price_at_exit"]), step=1_000)
+                cost_of_sale = st.number_input("Cost of Sale (%)", value=0.06, help="Cost of Sale includes broker fee and closing costs as a percentage of sales price")
+                submitted_exit = st.form_submit_button("Submit")
+                if submitted_exit:
+                    user_assumptions['length_hold'] = length_hold
+                    user_assumptions['appr_rate'] = appr_rate
+                    # user_assumptions['sales_price_at_exit'] = sales_price_at_exit
+                    user_assumptions['cost_of_sale'] = cost_of_sale
+                    # with open('data/user_assumptions_test.json', 'w') as f:
+                    #     json.dump(user_assumptions, f)
+                    # st.success("Exit Assumptions Updated")
+        with c2:
             st.write('')
-        with col11:
-            form = st.form("Submit Assumptions")
-            # m = st.markdown("""
-            # <style>
-            # div.stButton > button:first-child {
-            #     background-color: rgb(204, 49, 49);
-            # }
-            # </style>""", unsafe_allow_html=True)
-            rejected = form.form_submit_button("Edit")
-            confirmed = form.form_submit_button("Confirm Assumptions")
-            if confirmed:
-                st.write("Assumptions confirmed.")
-                st.write("You can now continue to the property analysis page.")
-                st.balloons()
-                st.markdown("<a href='/Analysis'>Click here to continue.</a>", unsafe_allow_html=True)
-            if rejected:
-                st.write("Please return to the assumptions page and make changes and submit again.")
-        with col12:
-            st.write('')
+        with c3:
+            with st.form("Others"):
+                vacancy_rate = st.number_input("Vacancy Rate (%/year)", value=0.0775, help="Vacancy rate is the percentage of the year that the property is vacant")
+                rent_growth_rate = st.number_input("Rent Growth Rate (%/year)", value=0.02, help="Rent growth rate is the percentage increase in rent per year")
+                repairs = st.number_input("Repairs (%/monthly)", value=0.07, help="Repairs and maintenance costs as a percentage of monthly rent")
+                property_taxes = st.number_input("Property Taxes ($/year)", value=1_000, step=100)
+                insurance = st.number_input("Insurance ($/year)", value=1_000, step=100)
+                utilities = st.number_input("Utilities ($/month)", value=100, step=10)
+                property_manager_fee = st.number_input("Property Manager Fee (%/month)", value=0.02, help="Property Manager Fee is the percentage of monthly rent charged to the property manager")
+                discount_rate = st.number_input("Discount Rate (%)", value=0.05, help="Discount rate for calculating the NPV")
+                submitted_others = st.form_submit_button("Submit")
+                if submitted_others:
+                    user_assumptions['vacancy_rate'] = vacancy_rate
+                    user_assumptions['rent_growth_rate'] = rent_growth_rate
+                    user_assumptions['repairs'] = repairs
+                    user_assumptions['property_taxes'] = property_taxes
+                    user_assumptions['insurance'] = insurance
+                    user_assumptions['utilities'] = utilities
+                    user_assumptions['property_manager_fee'] = property_manager_fee
+                    user_assumptions['discount_rate'] = discount_rate
+                    # with open('data/user_assumptions_test.json', 'w') as f:
+                    #     json.dump(user_assumptions, f)
+                    # st.success("Other Assumptions Updated")

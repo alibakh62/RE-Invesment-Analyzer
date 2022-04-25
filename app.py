@@ -6,7 +6,7 @@ import pages.search
 
 import streamlit as st
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="Real Estate Investment Analyzer", initial_sidebar_state="expanded")
 
 PAGES = {
     "Default Assumptions": pages.default_assumptions.app,
