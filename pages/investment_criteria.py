@@ -17,7 +17,6 @@ def app():
 
     user_metrics = {}
     user_finance = {}
-    user_search = {}
 
     with st.container():
         c1, c2, c3 = st.columns([1,2,1])
@@ -28,10 +27,10 @@ def app():
             st.write('')
         with c2:
             with st.form("Investment Criteria"):
-                cap_rate = st.slider("Cap Rate (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-                coc = st.slider("Cash on Cash Return (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-                irr_leveraged = st.slider("IRR Leveraged (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-                irr_unleveraged = st.slider("IRR Unleveraged (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
+                cap_rate = st.slider("Min. Cap Rate (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
+                coc = st.slider("Min. Cash on Cash Return (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
+                irr_leveraged = st.slider("Min. IRR Leveraged (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
+                irr_unleveraged = st.slider("Min. IRR Unleveraged (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
                 submitted_financing = st.form_submit_button("Submit")
                 if submitted_financing:
                     user_metrics['cap_rate'] = cap_rate
@@ -56,10 +55,10 @@ def app():
             st.write('')
         with c2:
             with st.form("Financing"):
-                extra_cash_reserves = st.number_input("Extra Cash Reserves", value=2500, step=1_000, help="Typically 1-2% of purchase price")
-                eqt_pct = st.number_input("Equity % of Total Project Cost", value=0.5)
-                amort_period = st.number_input("Amortization Period (years)", value=30, step=1)
-                int_rate_on_debt = st.number_input("Interest Rate (%) on Debt", value=0.05)
+                eqt_pct = st.number_input("How much are planning to pay as down payment? (as % of purchase price)", value=0.5)
+                amort_period = st.number_input("What mortgage duration (years) are you considering?", value=30, step=1)
+                int_rate_on_debt = st.number_input("What's your mortgage rate?(%)", value=0.05)
+                extra_cash_reserves = st.number_input("How much cash reserves you have? ($)", value=2500, step=1_000, help="This refers to any liquid assests you have leftover after paying your down payment and closing costs.")
                 submitted_financing = st.form_submit_button("Submit")
                 if submitted_financing:
                     user_finance['extra_cash_reserves'] = extra_cash_reserves
