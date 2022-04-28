@@ -1,7 +1,9 @@
+from re import sub
 import requests
 import streamlit as st
 import pandas as pd
 import json
+import plotly.express as px
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
@@ -35,6 +37,7 @@ def get_data(query):
 
     response = requests.request("GET", url, headers=headers, params=querystring)
     return response
+
 
 def app():
     """
@@ -77,64 +80,106 @@ def app():
         # is_pending = st.checkbox("Is the property pending under contract?")
         # is_coming_soon = st.checkbox("Is the property coming soon?")
 
-    st.markdown("#")
-    with st.container():
-        c1, c2, c3 = st.columns([4,1,4])
-        with c1:
-            st.write('')
-        with c2:
-            search_button = st.button("Search", key="search_button")
-        with c3:
-            st.write('')
-
-    if st.session_state.search_button:
-        query = {}
-        query['address'] = address
-        query['status_type'] = status_type
-        query['property_type'] = property_type
-        query['sort_by'] = sort_by
-        query['price'] = price
-        query['bedrooms'] = bedrooms
-        query['bathrooms'] = bathrooms
-        query['square_feet'] = square_feet
-        query['build_year'] = build_year
-        query['days_on_zillow'] = days_on_zillow
-
-        # query API
-        # response = get_data(query)
-        # with open('data/search_data.json', 'w') as f:
-        #     json.dump(response.json(), f)
-        # df = pd.json_normalize(response.json()['props'])
-        # df.to_csv("data/search_data.csv", index=False)
-        df = pd.read_csv("data/search_data.csv")
-
-        # clean up response
-        cols = ['zpid', 'address', 'price', 'listingDateTime', 'livingArea', 'lotAreaValue', 'bedrooms', 'bathrooms', 'listingSubType.is_FSBA', 'listingSubType.is_newHome', 'listingSubType.is_openHouse']
-        df_ = df[cols]
-        df_.columns = ['zpid', 'Address', 'Price', 'Listing DateTime', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms', 'is_FSBA', 'is_newHome', 'is_openHouse']
-        df_["Living Area (sqft)"] = df_["Living Area (sqft)"].astype(int)
-        df_["Lot Area (sqft)"] = df_["Lot Area (sqft)"].astype(int)
-        # # ================================================================
-        # df = pd.read_csv("data/search_data.csv")
-
-        # df = pd.read_csv("data/output.csv")
-        # # rearranage columns
-        # df = df[['zpid', 'Cash Required', 'Cap Rate', 'Mortgage Payment', 'Total Payments', 'Total Interest', 'Minimum Monthly Expenses', 'Monthly Cash Flow', 'Annual Yield (CoC ROI)']]
-        # # df = df.fillna('null')
-        # df = df.sort_values(by=['Cap Rate'], ascending=False)
-
+    # with st.form("Search"):
         st.markdown("#")
-        st.markdown("---")
-        st.markdown("#")
-        st.markdown("<h2 style='text-align: center; color: black;'>Search Results</h2>", unsafe_allow_html=True)
-        st.markdown("#")
-        st.dataframe(df_)
-        # st.json(query)
-        # st.json(querystring)
-        # st.json(response.json())
+        with st.container():
+            c1, c2, c3 = st.columns([4,1,4])
+            with c1:
+                st.write('')
+            with c2:
+                search_button = st.button("Search") #st.form_submit_button("Search")
+                st.markdown("#")
+            with c3:
+                st.write('')
 
-        # get property details
-        # selected_properties = st.multiselect("Select properties you want to analyze", df['address'], key="selected_properties")
-        # print(st.session_state.selected_properties)
+            if search_button:
+                query = {}
+                query['address'] = address
+                query['status_type'] = status_type
+                query['property_type'] = property_type
+                query['sort_by'] = sort_by
+                query['price'] = price
+                query['bedrooms'] = bedrooms
+                query['bathrooms'] = bathrooms
+                query['square_feet'] = square_feet
+                query['build_year'] = build_year
+                query['days_on_zillow'] = days_on_zillow
+
+                # query API
+                # response = get_data(query)
+                # with open('data/search_data.json', 'w') as f:
+                #     json.dump(response.json(), f)
+                # df = pd.json_normalize(response.json()['props'])
+                # df.to_csv("data/search_data.csv", index=False)
+                df = pd.read_csv("data/search_data.csv")
+
+                # clean up response
+                cols = ['zpid', 'address', 'price', 'listingDateTime', 'livingArea', 'lotAreaValue', 'bedrooms', 'bathrooms', 'listingSubType.is_FSBA', 'listingSubType.is_newHome', 'listingSubType.is_openHouse']
+                df_ = df[cols]
+                df_.columns = ['zpid', 'Address', 'Price', 'Listing DateTime', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms', 'is_FSBA', 'is_newHome', 'is_openHouse']
+                df_["Living Area (sqft)"] = df_["Living Area (sqft)"].astype(int)
+                df_["Lot Area (sqft)"] = df_["Lot Area (sqft)"].astype(int)
+                df_.to_csv("data/search_data_refined.csv", index=False)
+                # # ================================================================
+                # df = pd.read_csv("data/search_data.csv")
+
+                # df = pd.read_csv("data/output.csv")
+                # # rearranage columns
+                # df = df[['zpid', 'Cash Required', 'Cap Rate', 'Mortgage Payment', 'Total Payments', 'Total Interest', 'Minimum Monthly Expenses', 'Monthly Cash Flow', 'Annual Yield (CoC ROI)']]
+                # # df = df.fillna('null')
+                # df = df.sort_values(by=['Cap Rate'], ascending=False)
+
+                # st.markdown("#")
+                # st.markdown("---")
+                # st.markdown("#")
+                # st.markdown("<h2 style='text-align: center; color: black;'>Search Results</h2>", unsafe_allow_html=True)
+                # st.markdown("#")
+                # st.markdown("---")
+                # st.dataframe(df_)
+
+
+    with st.expander("Show the results in a table"):
+        if st.checkbox("Show the results in a table"):
+            df_ = pd.read_csv("data/search_data_refined.csv")
+            st.markdown("#")
+            st.markdown("---")
+            st.markdown("#")
+            st.markdown("<h2 style='text-align: center; color: black;'>Results</h2>", unsafe_allow_html=True)
+            st.markdown("#")
+            st.dataframe(df_)
+
+
+    with st.expander("Show the results in a map"):
+        if st.checkbox("Show the results in a map"):
+            df = pd.read_csv("data/search_data.csv")
+            px.set_mapbox_access_token(open("notebook/.mapbox_token").read())
+            fig = px.scatter_mapbox(df, lat="latitude", lon="longitude", color="price", size="price", hover_name="zpid", hover_data=["address", "price"], zoom=10, labels="zpid", height=600, color_continuous_scale=px.colors.cyclical.IceFire, size_max=15)
+            st.markdown("#")
+            st.markdown("---")
+            st.markdown("#")
+            st.markdown("<h2 style='text-align: center; color: black;'>Map</h2>", unsafe_allow_html=True)
+            st.markdown("#")
+            # this has to be done through st.plotly --> plotly.express.scatter_mapbox
+            # st.map(df, zoom=10, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
+
+    # get property details
+    # if True: #st.session_state.get('FormSubmitter:Search-Search'):
+    with st.expander("Select a property for analysis"):
+        with st.form("Select Property"):
+            df = pd.read_csv("data/search_data.csv")
+            # st.write(f"search state: {st.session_state}")
+            # st.markdown("#")
+            # st.markdown("---")
+            # st.markdown("#")
+            # st.markdown("<h1 style='text-align: center; color: black;'>Select a property for analysis</h1>", unsafe_allow_html=True)
+            # st.markdown("#")
+            selected_properties = st.selectbox("Select zpid of the properties you want to analyze", df['zpid'], key="selected_properties")
+            submit_selected_properties = st.form_submit_button("Submit")
+            if submit_selected_properties:
+                st.success(f"You selected {selected_properties} properties")
+    # else:
+    #     st.write("No properties selected")
+    # print(st.session_state.selected_properties)
 
     # print(response.text)
