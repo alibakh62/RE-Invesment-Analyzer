@@ -2,6 +2,7 @@ import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
 
+import pickle
 import numpy as np
 import pandas as pd
 import numpy_financial as npf
@@ -15,7 +16,7 @@ import json
 class InvestmentAssumptions:
 
     def __init__(self):
-        self.search_filepath = '../data/search.csv'
+        self.search_filepath = '../data/search_data.csv'
         self.user_finance_filepath = '../data/user_finance.json'
         self.user_finance = None
         self.property_details = None
@@ -68,24 +69,24 @@ class InvestmentAssumptions:
     def get_tax_rate(self, zpid):
         tax_info = {}
         if self.property_details is None:
-            self.property_details = api.get_property_details(zpid).json()
+            self.property_details = api.property_detail(zpid).json()
         tax_info['tax_rate'] = self.property_details['propertyTaxRate']
         tax_info['tax_history'] = self.property_details['taxHistory']
         return tax_info
 
     def get_insurance(self, zpid):
         if self.property_details is None:
-            self.property_details = api.get_property_details(zpid).json()
+            self.property_details = api.property_detail(zpid).json()
         return self.property_details['annualHomeownersInsurance']
 
     def get_rent_estimate(self, zpid):
         if self.rent_data is None:
             if self.search_data is None:
                 self.search_data = pd.read_csv(self.search_filepath)
-            property_type = self.search.loc[self.search["zpid"] == zpid, "propertyType"].values[0]
-            address = self.search.loc[self.search["zpid"] == zpid, "address"].values[0]
-            beds = self.search.loc[self.search["zpid"] == zpid, "bedrooms"].values[0]
-            baths = self.search.loc[self.search["zpid"] == zpid, "bathrooms"].values[0]  
+            property_type = self.search_data.loc[self.search_data["zpid"] == zpid, "propertyType"].values[0]
+            address = self.search_data.loc[self.search_data["zpid"] == zpid, "address"].values[0]
+            beds = self.search_data.loc[self.search_data["zpid"] == zpid, "bedrooms"].values[0]
+            baths = self.search_data.loc[self.search_data["zpid"] == zpid, "bathrooms"].values[0]  
 
             # creating a mapping between standard property types across different APIs
             property_type0 = ["SINGLE_FAMILY", "CONDO", "TOWNHOUSE", "MULTI_FAMILY"]
@@ -104,11 +105,16 @@ class InvestmentAssumptions:
     
 class DataPrep:
 
-    def __init__(self, zpid):
+    def __init__(self, zpid, investment_assumptions=None):
         self.zpid = zpid
         self.user_assumptions = None
         self.amortization = None
         self.cash_flow = None
+        self.investment_assumptions = investment_assumptions
+
+    def np_encoder(self, object):
+        if isinstance(object, np.generic):
+            return object.item()
 
     @classmethod
     def cumulative(cls, lists):
@@ -127,11 +133,13 @@ class DataPrep:
 
     def get_assumptions(self):
         user_assumptions = {}
+        if self.investment_assumptions is None:
+            self.investment_assumptions = InvestmentAssumptions()
         assumptions = InvestmentAssumptions()
-        cash_reserve = assumptions.get_user_finance_assumptions(self.zpid)['extra_cash_reserves']
-        equity_pct = assumptions.get_user_finance_assumptions(self.zpid)['eqt_pct']
-        amort_period = assumptions.get_user_finance_assumptions(self.zpid)['amort_period']
-        int_rate = assumptions.get_user_finance_assumptions(self.zpid)['int_rate_on_debt']
+        cash_reserve = assumptions.get_user_finance_assumptions()['extra_cash_reserves']
+        equity_pct = assumptions.get_user_finance_assumptions()['eqt_pct']
+        amort_period = assumptions.get_user_finance_assumptions()['amort_period']
+        int_rate = assumptions.get_user_finance_assumptions()['int_rate_on_debt']
         price = assumptions.get_listing_price(self.zpid)
         rent = assumptions.get_rent_estimate(self.zpid)['rent']
         insurance = assumptions.get_insurance(self.zpid)
@@ -158,13 +166,13 @@ class DataPrep:
         user_assumptions['MAX_HOLD'] = assumptions.MAX_HOLD
         user_assumptions['length_of_hold'] = assumptions.length_of_hold
         user_assumptions['appreciation'] = assumptions.appreciation
-        user_assumptions['sales_price_at_exit'] = np.round((price*(1+assumptions.appreciation))**min(assumptions.MAX_HOLD, assumptions.length_of_hold), 0)
+        user_assumptions['sales_price_at_exit'] = np.round(price*(1+assumptions.appreciation)**min(assumptions.MAX_HOLD, assumptions.length_of_hold), 0)
         user_assumptions['cost_of_sale'] = assumptions.cost_of_sale
         user_assumptions['vacancy_rate'] = assumptions.vacancy_rate
         user_assumptions['rent_growth_rate'] = assumptions.rent_growth_rate
         user_assumptions['repair_allowance'] = assumptions.repair_allowance
         user_assumptions['repair_allowance_amount'] = np.round(assumptions.repair_allowance*rent*12, 0)
-        user_assumptions['property_taxes'] = np.round(price*tax_rate, 0)
+        user_assumptions['property_taxes'] = np.round(price*tax_rate*0.01, 0)
         user_assumptions['insurance'] = insurance
         user_assumptions['property_manager_rate'] = assumptions.property_manager_rate
         user_assumptions['property_manager_amount'] = np.round(assumptions.property_manager_rate*rent, 0)
@@ -180,7 +188,7 @@ class DataPrep:
         params = self.user_assumptions
         amortization['dates'] = pd.date_range(start=params['purchase_date'], periods=int(12*params['length_of_hold']), freq='M').strftime('%Y-%m-%d').tolist()
         amortization['month_numbers'] = [datetime.strptime(d, '%Y-%m-%d').month for d in amortization['dates']]
-        amortization['months'] = [i+1 for i in range(len(amortization['months_numbers']))]
+        amortization['months'] = [i+1 for i in range(len(amortization['month_numbers']))]
         amortization['rate_per_period'] = (1 + params['interest_rate_on_debt']/12)**(12/12) - 1
         amortization['number_of_payments'] = params['amortization_period']*12
         amortization['monthly_payment'] = -np.round(npf.pmt(rate= params['interest_rate_on_debt']/ 12, nper=params['amortization_period'] * 12, pv=params['total_project_loan_amount'], fv=0, when='end'), 2)
@@ -224,7 +232,7 @@ class DataPrep:
         cash_flow['vacancy'] = [params['vacancy_rate'] for i in range(len(cash_flow['months']))]
         # project costs
         cash_flow['closing_costs'] = [0 for i in range(len(cash_flow['months']))]
-        cash_flow['closing_costs'][0] = -params['closing_costs']
+        cash_flow['closing_costs'][0] = -params['closing_costs_']
         cash_flow['purchase_costs'] = [0 for i in range(len(cash_flow['months']))]
         cash_flow['purchase_costs'][0] = -params['purchase_price']
         renovations0 = [-params['renovation_costs']//params['renovation_period'] if cash_flow['months'][i] <= params['renovation_period'] else 0 for i in range(len(cash_flow['months']))]
@@ -236,14 +244,14 @@ class DataPrep:
         cash_flow['cash_invested'][0] = params['total_equity_investment']
         cash_flow['extra_reserves'] = [0 for i in range(len(cash_flow['months']))]
         cash_flow['extra_reserves'][0] = params['extra_cash_reserves']
-        cash_flow['rents'] = self.calc_rent_cash_flow(cash_flow['months'], params['monthly_gross_rent'], cash_flow['rent_growth_rate'], cash_flow['lease_up'], cash_flow['exit_sale'], cash_flow['project_life'])
+        cash_flow['rents'] = self.calc_rent_cash_flow(cash_flow['months'], params['monthly_gross_rent'], cash_flow['rental_growth_rate'], cash_flow['lease_up'], cash_flow['exit_sale'], cash_flow['project_life'])
         cash_flow['less_vacancy'] = [params['vacancy_rate']*cash_flow['rents'][i] for i in range(len(cash_flow['months']))]
         cash_flow['less_management_fees'] = [params['property_manager_rate']*cash_flow['rents'][i] for i in range(len(cash_flow['months']))]
         cash_flow['less_repairs'] = [params['repair_allowance']*cash_flow['rents'][i] for i in range(len(cash_flow['months']))]
         cash_flow['less_taxes'] = [params['property_taxes']*cash_flow['project_life'][i] if i % 12 == 0 else 0 for i in range(len(cash_flow['months']))]
         cash_flow['less_insurance'] = [params['insurance']*cash_flow['project_life'][i] if i % 12 == 0 else 0 for i in range(len(cash_flow['months']))]
         cash_flow['less_utilities'] = [cash_flow['lease_up'][i]*cash_flow['project_life'][i]*params['utilities'] for i in range(len(cash_flow['months']))]
-        cash_flow['net_rents'] = [np.round(cash_flow['rents'][i]-cash_flow['less_management_fees'][i]-cash_flow['less_vacancy'][i]-cash_flow['less_repairs'][i]-cash_flow['less_taxes'][i]-cash_flow['less_insurance'][i]-cash_flow['less_utilities'][i], 0)) for i in range(len(months))]
+        cash_flow['net_rents'] = [np.round(cash_flow['rents'][i]-cash_flow['less_management_fees'][i]-cash_flow['less_vacancy'][i]-cash_flow['less_repairs'][i]-cash_flow['less_taxes'][i]-cash_flow['less_insurance'][i]-cash_flow['less_utilities'][i], 0) for i in range(len(cash_flow['months']))]
         # Loan principal
         cash_flow['interest'] = [np.round(amort['amortization_interest'][i+1], 0) for i in range(len(cash_flow['months']))]
         cash_flow['interest_paid_from_rents'] = [max(0, min(cash_flow['net_rents'][i], cash_flow['interest'][i])) for i in range(len(cash_flow['months']))]
@@ -267,12 +275,12 @@ class DataPrep:
         for i in range(len(cash_flow['months'])):
             if i == 0:
                 cash_flow['bank_account'].append(cash_flow['cash_invested'][i] + cash_flow['extra_reserves'][i] + cash_flow['net_rents'][i])
-                cash_flow['debt_service_paid'].append(min(cash_flow['bank_account'][i], cash_flow['interest_paid_from_account'][i] + cash_flow['principal_paid_from_account'][i]))
+                cash_flow['debt_services_paid'].append(min(cash_flow['bank_account'][i], cash_flow['interest_paid_from_account'][i] + cash_flow['principal_paid_from_account'][i]))
                 cash_flow['less_reserves'].append(min(0, cash_flow['net_rents'][i] + cash_flow['total_project_costs'][i] + cash_flow['loan_principal'][i]))
                 cash_flow['net_rent_deposits'].append(max(0, cash_flow['net_rent_debt_services'][i]))
             else:
-                cash_flow['bank_account'].append(cash_flow['bank_account'][i-1] - cash_flow['debt_service_paid'][i-1] + cash_flow['less_reserves'][i-1] + cash_flow['net_rent_deposits'][i-1])
-                cash_flow['debt_service_paid'].append(min(cash_flow['bank_account'][i], cash_flow['interest_paid_from_account'][i] + cash_flow['principal_paid_from_account'][i]))
+                cash_flow['bank_account'].append(cash_flow['bank_account'][i-1] - cash_flow['debt_services_paid'][i-1] + cash_flow['less_reserves'][i-1] + cash_flow['net_rent_deposits'][i-1])
+                cash_flow['debt_services_paid'].append(min(cash_flow['bank_account'][i], cash_flow['interest_paid_from_account'][i] + cash_flow['principal_paid_from_account'][i]))
                 cash_flow['less_reserves'].append(min(0, cash_flow['net_rents'][i] + cash_flow['total_project_costs'][i]))
                 cash_flow['net_rent_deposits'].append(max(0, cash_flow['net_rent_debt_services'][i] - cash_flow['principal_paid_from_account'][i] - cash_flow['interest_paid_from_account'][i]))
         cash_flow['sales_price'] = [0 for i in range(len(cash_flow['months']))]
@@ -298,5 +306,11 @@ class DataPrep:
                     unlevered_amt = cash_flow['net_rent_debt_services'][i] + cash_flow['net_proceeds'][i]
                 cash_flow['cash_flow_leveraged'].append(unlevered_amt)
         self.cash_flow = cash_flow
+        with open('../data/user_assumptions_output.pkl', 'wb') as f:
+            pickle.dump(self.user_assumptions, f)
+        with open('../data/cash_flow_output.pkl', 'wb') as f:
+            pickle.dump(self.cash_flow, f)
+        with open('../data/amortization_output.pkl', 'wb') as f:
+            pickle.dump(self.amortization, f)
         return cash_flow
 
