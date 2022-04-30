@@ -11,11 +11,6 @@ import src.api as api
 from scipy.optimize import anderson
 import json
 
-def cumulative(lists):
-    cu_list = []
-    length = len(lists)
-    cu_list = [sum(lists[0:x:1]) for x in range(0, length+1)]
-    return np.sum(cu_list[1:])
 
 class InvestmentAssumptions:
 
@@ -113,6 +108,22 @@ class DataPrep:
         self.zpid = zpid
         self.user_assumptions = None
         self.amortization = None
+        self.cash_flow = None
+
+    @classmethod
+    def cumulative(cls, lists):
+        cu_list = []
+        length = len(lists)
+        cu_list = [sum(lists[0:x:1]) for x in range(0, length+1)]
+        return np.sum(cu_list[1:])
+
+    @classmethod
+    def calc_rent_cash_flow(cls, months, monthly_gross_rent, rental_growth_rate, lease_up, exit_sale, project_life):
+        rent_cash_flow = []
+        rent_cash_flow.append(lease_up[0]*monthly_gross_rent)
+        for i in range(1, len(months)):
+            rent_cash_flow.append(int(np.round(max(lease_up[i]*monthly_gross_rent*(1+rental_growth_rate[i]), (rent_cash_flow[i-1]*(1+rental_growth_rate[i])))*project_life[i], 0)))
+        return rent_cash_flow
 
     def get_assumptions(self):
         user_assumptions = {}
@@ -193,4 +204,99 @@ class DataPrep:
                 amortization['amortization_balance'].append(np.round(amortization['amortization_balance'][i-1] - amortization['amortization_principal'][i] - amortization['amortization_additional_payment'][i], 2))
         self.amortization = amortization
         return amortization
+
+    def get_cashflow(self):
+        cash_flow = {}
+        if self.user_assumptions is None:
+            self.get_assumptions()
+        if self.amortization is None:
+            self.get_amortization()
+        params = self.user_assumptions
+        amort = self.amortization
+        cash_flow['dates'] = amort['dates']
+        cash_flow['month_numbers'] = amort['month_numbers']
+        cash_flow['months'] = amort['months']
+        cash_flow['lease_up'] = [0 if cash_flow['months'][i] <= params['renovation_period'] else 1 for i in range(len(cash_flow['months']))]
+        cash_flow['exit_sale'] = [0 if np.round(min(min(np.round(params['length_of_hold'], 0), 7), 7), 0)*12 != cash_flow['months'][i] else 1 for i in range(len(cash_flow['months']))]
+        cash_flow['project_life'] = [0 if self.cumulative(cash_flow['exit_sale'][:i]) == 1 else 1 for i in range(len(cash_flow['exit_sale']))]
+        # rent assumptions
+        cash_flow['rental_growth_rate'] = [params['rent_growth_rate'] if (cash_flow['months'][i] % 12) == 0 else 0 for i in range(len(cash_flow['months']))]
+        cash_flow['vacancy'] = [params['vacancy_rate'] for i in range(len(cash_flow['months']))]
+        # project costs
+        cash_flow['closing_costs'] = [0 for i in range(len(cash_flow['months']))]
+        cash_flow['closing_costs'][0] = -params['closing_costs']
+        cash_flow['purchase_costs'] = [0 for i in range(len(cash_flow['months']))]
+        cash_flow['purchase_costs'][0] = -params['purchase_price']
+        renovations0 = [-params['renovation_costs']//params['renovation_period'] if cash_flow['months'][i] <= params['renovation_period'] else 0 for i in range(len(cash_flow['months']))]
+        renovations1 = [params['exit_renovation_cost'] if cash_flow['months'][i] == min(params['length_of_hold'], params['MAX_HOLD'])*12 else 0 for i in range(len(cash_flow['months']))]
+        cash_flow['renovations'] = [renovations0[i]-renovations1[i] for i in range(len(cash_flow['months']))]
+        cash_flow['total_project_costs'] = [cash_flow['closing_costs'][i]+cash_flow['purchase_costs'][i]+cash_flow['renovations'][i] for i in range(len(cash_flow['months']))]
+        # Net rent
+        cash_flow['cash_invested'] = [0 for i in range(len(cash_flow['months']))]
+        cash_flow['cash_invested'][0] = params['total_equity_investment']
+        cash_flow['extra_reserves'] = [0 for i in range(len(cash_flow['months']))]
+        cash_flow['extra_reserves'][0] = params['extra_cash_reserves']
+        cash_flow['rents'] = self.calc_rent_cash_flow(cash_flow['months'], params['monthly_gross_rent'], cash_flow['rent_growth_rate'], cash_flow['lease_up'], cash_flow['exit_sale'], cash_flow['project_life'])
+        cash_flow['less_vacancy'] = [params['vacancy_rate']*cash_flow['rents'][i] for i in range(len(cash_flow['months']))]
+        cash_flow['less_management_fees'] = [params['property_manager_rate']*cash_flow['rents'][i] for i in range(len(cash_flow['months']))]
+        cash_flow['less_repairs'] = [params['repair_allowance']*cash_flow['rents'][i] for i in range(len(cash_flow['months']))]
+        cash_flow['less_taxes'] = [params['property_taxes']*cash_flow['project_life'][i] if i % 12 == 0 else 0 for i in range(len(cash_flow['months']))]
+        cash_flow['less_insurance'] = [params['insurance']*cash_flow['project_life'][i] if i % 12 == 0 else 0 for i in range(len(cash_flow['months']))]
+        cash_flow['less_utilities'] = [cash_flow['lease_up'][i]*cash_flow['project_life'][i]*params['utilities'] for i in range(len(cash_flow['months']))]
+        cash_flow['net_rents'] = [np.round(cash_flow['rents'][i]-cash_flow['less_management_fees'][i]-cash_flow['less_vacancy'][i]-cash_flow['less_repairs'][i]-cash_flow['less_taxes'][i]-cash_flow['less_insurance'][i]-cash_flow['less_utilities'][i], 0)) for i in range(len(months))]
+        # Loan principal
+        cash_flow['interest'] = [np.round(amort['amortization_interest'][i+1], 0) for i in range(len(cash_flow['months']))]
+        cash_flow['interest_paid_from_rents'] = [max(0, min(cash_flow['net_rents'][i], cash_flow['interest'][i])) for i in range(len(cash_flow['months']))]
+        cash_flow['interest_paid_from_account'] = [cash_flow['interest'][i]-cash_flow['interest_paid_from_rents'][i] if cash_flow['net_rents'][i] < cash_flow['interest'][i] else 0 for i in range(len(cash_flow['months']))]
+        cash_flow['principal_amount'] = [np.round(amort['amortization_principal'][i+1], 0) for i in range(len(cash_flow['months']))]
+        cash_flow['principal_paid_from_rents'] = [max(0, min(cash_flow['principal_amount'][i], cash_flow['net_rents'][i]-cash_flow['interest_paid_from_rents'][i])) for i in range(len(cash_flow['months']))]
+        cash_flow['principal_paid_from_account'] = [cash_flow['principal_amount'][i]-cash_flow['principal_paid_from_rents'][i] if cash_flow['principal_amount'][i] > cash_flow['principal_paid_from_rents'][i] else 0 for i in range(len(cash_flow['months']))]
+        cash_flow['principal_paid_from_sale'] = [0 for i in range(len(cash_flow['months']))]
+        cash_flow['loan_principal'] = []
+        for i in range(len(cash_flow['months'])):
+            if i == 0:
+                cash_flow['loan_principal'].append(params['total_project_loan_amount'])
+            else:
+                cash_flow['loan_principal'].append(np.round(max(0, cash_flow['loan_principal'][i-1] + cash_flow['interest'][i-1] - cash_flow['interest_paid_from_rents'][i-1] - cash_flow['interest_paid_from_account'][i-1]- cash_flow['principal_paid_from_rents'][i-1] - cash_flow['principal_paid_from_account'][i-1] - cash_flow['principal_paid_from_sale'][i-1]), 0))
+        cash_flow['net_rent_debt_services'] = [cash_flow['net_rents'][i]-cash_flow['interest_paid_from_rents'][i]-cash_flow['principal_paid_from_rents'][i] for i in range(len(cash_flow['months']))]
+        # Net rents - debt services
+        cash_flow['debt_services_paid'] = []
+        cash_flow['less_reserves'] = []
+        cash_flow['net_rent_deposits'] = []
+        cash_flow['bank_account'] = []
+        for i in range(len(cash_flow['months'])):
+            if i == 0:
+                cash_flow['bank_account'].append(cash_flow['cash_invested'][i] + cash_flow['extra_reserves'][i] + cash_flow['net_rents'][i])
+                cash_flow['debt_service_paid'].append(min(cash_flow['bank_account'][i], cash_flow['interest_paid_from_account'][i] + cash_flow['principal_paid_from_account'][i]))
+                cash_flow['less_reserves'].append(min(0, cash_flow['net_rents'][i] + cash_flow['total_project_costs'][i] + cash_flow['loan_principal'][i]))
+                cash_flow['net_rent_deposits'].append(max(0, cash_flow['net_rent_debt_services'][i]))
+            else:
+                cash_flow['bank_account'].append(cash_flow['bank_account'][i-1] - cash_flow['debt_service_paid'][i-1] + cash_flow['less_reserves'][i-1] + cash_flow['net_rent_deposits'][i-1])
+                cash_flow['debt_service_paid'].append(min(cash_flow['bank_account'][i], cash_flow['interest_paid_from_account'][i] + cash_flow['principal_paid_from_account'][i]))
+                cash_flow['less_reserves'].append(min(0, cash_flow['net_rents'][i] + cash_flow['total_project_costs'][i]))
+                cash_flow['net_rent_deposits'].append(max(0, cash_flow['net_rent_debt_services'][i] - cash_flow['principal_paid_from_account'][i] - cash_flow['interest_paid_from_account'][i]))
+        cash_flow['sales_price'] = [0 for i in range(len(cash_flow['months']))]
+        cash_flow['sales_price'][-1] = params['sales_price_at_exit']
+        cash_flow['less_cost_of_sales'] = [params['cost_of_sale']*cash_flow['sales_price'][i] for i in range(len(cash_flow['months']))]
+        cash_flow['less_debt'] = [min(cash_flow['sales_price'][i]-cash_flow['less_cost_of_sales'][i], cash_flow['loan_principal'][i]+cash_flow['interest'][i]-cash_flow['interest_paid_from_rents'][i]-cash_flow['principal_paid_from_rents'][i]) for i in range(len(cash_flow['months']))]
+        cash_flow['net_proceeds'] = [np.round(cash_flow['sales_price'][i]-cash_flow['less_cost_of_sales'][i]-cash_flow['less_debt'][i], 0) for i in range(len(cash_flow['months']))]
+        cash_flow['cash_flow_unleveraged'] = []
+        cash_flow['cash_flow_leveraged'] = []
+        for i in range(len(cash_flow['months'])):
+            if i == 0:
+                cash_flow['cash_flow_unleveraged'].append(cash_flow['total_project_costs'][i]+cash_flow['extra_reserves'][i]+cash_flow['net_rents'][i]+cash_flow['sales_price'][i]-cash_flow['less_cost_of_sales'][i])
+                if params['equity_pct'] == 1:
+                    unlevered_amt = cash_flow['cash_flow_unleveraged'][i]
+                else:
+                    unlevered_amt = -cash_flow['cash_invested'][i] + cash_flow['net_rents'][i] - cash_flow['extra_reserves'][i]
+                cash_flow['cash_flow_leveraged'].append(unlevered_amt)
+            else:
+                cash_flow['cash_flow_unleveraged'].append(cash_flow['total_project_costs'][i]+cash_flow['net_rents'][i]+cash_flow['sales_price'][i]-cash_flow['less_cost_of_sales'][i])
+                if params['equity_pct'] == 1:
+                    unlevered_amt = cash_flow['cash_flow_unleveraged'][i]
+                else:
+                    unlevered_amt = cash_flow['net_rent_debt_services'][i] + cash_flow['net_proceeds'][i]
+                cash_flow['cash_flow_leveraged'].append(unlevered_amt)
+        self.cash_flow = cash_flow
+        return cash_flow
 
