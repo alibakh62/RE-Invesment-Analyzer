@@ -1,1 +1,2 @@
 plotly-express==0.4.1
+numpy-financial==1.0.0
