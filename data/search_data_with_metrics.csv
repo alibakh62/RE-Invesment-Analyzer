@@ -1,0 +1,11 @@
+zpid,Address,Price,IRR (unleveraged),IRR (leveraged),Cap Rate,Cash On Cash Return,Living Area (sqft),Lot Area (sqft),Bedrooms,Bathrooms,is_FSBA,is_newHome,is_openHouse
+26834283,"3807 Vilbig Rd, Dallas, TX 75212",499000,4.64,4.53,2.07,8.3,1855,2787,3,3,True,,
+96533411,"3505 Ebenezer Mews, Dallas, TX 75236",435000,3.87,3.05,1.57,7.31,1913,3267,3,3,True,,
+26713825,"210 W Jerden Ln, Dallas, TX 75208",400000,3.7,2.69,1.46,7.09,1820,6751,3,3,,True,
+303982067,"1471 Barrel Dr, Dallas, TX 75253",357000,3.41,2.08,1.28,6.73,1604,5654,3,2,True,,
+89366787,"8233 Clarkview Dr, Dallas, TX 75236",352000,2.81,0.97,0.88,5.95,1545,5488,3,2,True,,True
+96514412,"14319 Bridgeview Ln, Dallas, TX 75253",315000,4.31,3.66,1.9,7.92,1946,5749,3,3,True,,True
+96521355,"2278 Red Chute Dr, Dallas, TX 75253",309500,4.25,3.53,1.86,7.82,1840,7013,3,2,True,,
+67962496,"6142 Veranda Way, Dallas, TX 75241",299900,4.46,3.9,2.01,8.11,1996,5488,3,2,True,,
+69676335,"6834 Clark Vista Dr, Dallas, TX 75236",299900,3.69,2.47,1.49,7.11,1446,5488,3,2,True,,
+83999315,"1921 Courtside Dr, Grand Prairie, TX 75051",268000,4.61,4.08,2.12,8.31,1360,5009,3,2,True,,

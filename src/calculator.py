@@ -23,3 +23,11 @@ investment_assumptions = InvestmentAssumptions()
 investment_assumptions.renovation_costs = 4000
 # like that you continue to update assumption values
 # then, calculate the metrics as above.
+
+
+
+# Cap Rate
+Metrics.cap_rate(cash_flow['net_rents'], ua['purchase_price'])
+
+# cash on cash return
+Metrics.cash_on_cash_return(cash_flow['net_rents'], cash_flow['less_taxes'], cash_flow['cash_invested'])

@@ -1,19 +1,19 @@
-zpid,Address,Price,Listing DateTime,Living Area (sqft),Lot Area (sqft),Bedrooms,Bathrooms,is_FSBA,is_newHome,is_openHouse
-26834283,"3807 Vilbig Rd, Dallas, TX 75212",499000,,1855,2787,3,3,True,,
-96533411,"3505 Ebenezer Mews, Dallas, TX 75236",435000,,1913,3267,3,3,True,,
-26713825,"210 W Jerden Ln, Dallas, TX 75208",400000,,1820,6751,3,3,,True,
-303982067,"1471 Barrel Dr, Dallas, TX 75253",357000,,1604,5654,3,2,True,,
-89366787,"8233 Clarkview Dr, Dallas, TX 75236",352000,,1545,5488,3,2,True,,True
-96514412,"14319 Bridgeview Ln, Dallas, TX 75253",315000,,1946,5749,3,3,True,,True
-96521355,"2278 Red Chute Dr, Dallas, TX 75253",309500,,1840,7013,3,2,True,,
-67962496,"6142 Veranda Way, Dallas, TX 75241",299900,,1996,5488,3,2,True,,
-69676335,"6834 Clark Vista Dr, Dallas, TX 75236",299900,,1446,5488,3,2,True,,
-83999315,"1921 Courtside Dr, Grand Prairie, TX 75051",268000,,1360,5009,3,2,True,,
-26856598,"3019 Flask Dr, Dallas, TX 75241",265000,,1639,5749,3,2,True,,
-83997205,"212 River Rock Dr, Dallas, TX 75217",265000,,1553,3049,3,2,True,,
-55826473,"7304 Buford Dr, Dallas, TX 75241",254000,,1243,5009,3,2,True,,
-84004590,"2110 Volga Ave, Dallas, TX 75216",244500,,1236,9147,3,2,True,,
-80240499,"3336 Pinebrook Dr, Dallas, TX 75241",237400,,1165,5706,3,2,True,,
-96492086,"6634 Cool Morn Dr, Dallas, TX 75241",230000,,1424,6249,3,2,True,,
-26820021,"2715 Kirven Dr, Dallas, TX 75227",174900,,1000,0,2,1,True,,
-26822415,"2729 Kool Ave, Dallas, TX 75241",160000,,1080,6446,3,2,True,,
+zpid,Address,Price,Living Area (sqft),Lot Area (sqft),Bedrooms,Bathrooms,is_FSBA,is_newHome,is_openHouse
+26834283,"3807 Vilbig Rd, Dallas, TX 75212",499000,1855,2787,3,3,True,,
+96533411,"3505 Ebenezer Mews, Dallas, TX 75236",435000,1913,3267,3,3,True,,
+26713825,"210 W Jerden Ln, Dallas, TX 75208",400000,1820,6751,3,3,,True,
+303982067,"1471 Barrel Dr, Dallas, TX 75253",357000,1604,5654,3,2,True,,
+89366787,"8233 Clarkview Dr, Dallas, TX 75236",352000,1545,5488,3,2,True,,True
+96514412,"14319 Bridgeview Ln, Dallas, TX 75253",315000,1946,5749,3,3,True,,True
+96521355,"2278 Red Chute Dr, Dallas, TX 75253",309500,1840,7013,3,2,True,,
+67962496,"6142 Veranda Way, Dallas, TX 75241",299900,1996,5488,3,2,True,,
+69676335,"6834 Clark Vista Dr, Dallas, TX 75236",299900,1446,5488,3,2,True,,
+83999315,"1921 Courtside Dr, Grand Prairie, TX 75051",268000,1360,5009,3,2,True,,
+26856598,"3019 Flask Dr, Dallas, TX 75241",265000,1639,5749,3,2,True,,
+83997205,"212 River Rock Dr, Dallas, TX 75217",265000,1553,3049,3,2,True,,
+55826473,"7304 Buford Dr, Dallas, TX 75241",254000,1243,5009,3,2,True,,
+84004590,"2110 Volga Ave, Dallas, TX 75216",244500,1236,9147,3,2,True,,
+80240499,"3336 Pinebrook Dr, Dallas, TX 75241",237400,1165,5706,3,2,True,,
+96492086,"6634 Cool Morn Dr, Dallas, TX 75241",230000,1424,6249,3,2,True,,
+26820021,"2715 Kirven Dr, Dallas, TX 75227",174900,1000,0,2,1,True,,
+26822415,"2729 Kool Ave, Dallas, TX 75241",160000,1080,6446,3,2,True,,

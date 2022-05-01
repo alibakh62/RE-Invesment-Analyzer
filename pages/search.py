@@ -1,42 +1,17 @@
 from re import sub
 import requests
 import streamlit as st
+import numpy as np
 import pandas as pd
 import json
 import plotly.express as px
+import src.api as api
+import time
+from src.utils import DataPrep, InvestmentAssumptions
+from src.metrics import Metrics
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
-
-@st.cache
-def get_data(query):
-    # get property details
-    url = "https://zillow-com1.p.rapidapi.com/propertyExtendedSearch"
-
-    querystring = {f"location": str(query['address']),
-                    "page":"2",
-                    "status_type":str(query['status_type']),
-                    "home_type":str(query['property_type']),
-                    "sort":str(query['sort_by']),
-                    "minPrice":str(query['price'][0]),
-                    "maxPrice":str(query['price'][1]),
-                    "bathsMin":str(query['bathrooms'][0]),
-                    "bathsMax":str(query['bathrooms'][1]),
-                    "bedsMin":str(query['bedrooms'][0]),
-                    "bedsMax":str(query['bedrooms'][1]),
-                    "sqftMin":str(query['square_feet'][0]),
-                    "sqftMax":str(query['square_feet'][1]),
-                    "buildYearMin":str(query['build_year'][0]),
-                    "buildYearMax":str(query['build_year'][1]),
-                    "daysOn":str(query['days_on_zillow']),}
-
-    headers = {
-        "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
-    }
-
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    return response
 
 
 def app():
@@ -44,7 +19,6 @@ def app():
     This is where user searches for properties
     """
     st.markdown("<h1 style='text-align: center; color: black;'>Search</h1>", unsafe_allow_html=True)
-    # st.markdown("<p style='text-align: center; color: grey;'>Enter an address, neighborhood, city, or zip code.</p>", unsafe_allow_html=True)
 
     # st text input
     address = st.text_input("Enter an address, neighborhood, city, or zip code", key="search_address", placeholder="Dallas, TX")
@@ -106,7 +80,8 @@ def app():
                 query['days_on_zillow'] = days_on_zillow
 
                 # query API
-                # response = get_data(query)
+                # response = api.property_search(query)
+                # storing the response for further use
                 # with open('data/search_data.json', 'w') as f:
                 #     json.dump(response.json(), f)
                 # df = pd.json_normalize(response.json()['props'])
@@ -114,9 +89,9 @@ def app():
                 df = pd.read_csv("data/search_data.csv")
 
                 # clean up response
-                cols = ['zpid', 'address', 'price', 'listingDateTime', 'livingArea', 'lotAreaValue', 'bedrooms', 'bathrooms', 'listingSubType.is_FSBA', 'listingSubType.is_newHome', 'listingSubType.is_openHouse']
+                cols = ['zpid', 'address', 'price', 'livingArea', 'lotAreaValue', 'bedrooms', 'bathrooms', 'listingSubType.is_FSBA', 'listingSubType.is_newHome', 'listingSubType.is_openHouse']
                 df_ = df[cols]
-                df_.columns = ['zpid', 'Address', 'Price', 'Listing DateTime', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms', 'is_FSBA', 'is_newHome', 'is_openHouse']
+                df_.columns = ['zpid', 'Address', 'Price', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms', 'is_FSBA', 'is_newHome', 'is_openHouse']
                 df_["Living Area (sqft)"] = df_["Living Area (sqft)"].astype(int)
                 df_["Lot Area (sqft)"] = df_["Lot Area (sqft)"].astype(int)
                 df_.to_csv("data/search_data_refined.csv", index=False)
@@ -140,20 +115,57 @@ def app():
 
     with st.expander("Show the results in a table"):
         if st.checkbox("Show the results in a table"):
-            df_ = pd.read_csv("data/search_data_refined.csv")
+            # df_ = pd.read_csv("data/search_data_refined.csv")
+            # df_out = df_.iloc[:10,].copy()  # limit to 10 rows for now
+            # df_out["IRR (unleveraged)"] = 0
+            # df_out["IRR (leveraged)"] = 0
+            # df_out["Cap Rate"] = 0
+            # df_out["Cash On Cash Return"] = 0
+            # for i, row in df_out.iterrows():
+            #     try:
+            #         zpid = int(row['zpid'])
+            #         print(zpid)
+            #         dp = DataPrep(zpid)
+            #         cash_flow = dp.get_cashflow()
+            #         cash_flow_unleveraged = cash_flow['cash_flow_unleveraged']
+            #         cash_flow_leveraged = cash_flow['cash_flow_leveraged']
+            #         dates = dp.get_cashflow()['dates']
+            #         dates_xirr = Metrics.xirr_dates(dates)
+            #         irr_unleveraged = np.round((Metrics.xirr(values=cash_flow_unleveraged, dates=dates_xirr))*100, 2)
+            #         irr_leveraged = np.round((Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr))*100, 2)
+            #         cap_rate = Metrics.cap_rate(cash_flow['net_rents'], row['Price'])
+            #         coc = Metrics.cash_on_cash_return(cash_flow['net_rents'], cash_flow['less_taxes'], cash_flow['cash_invested'])
+            #         print("irr unleveraged: ", irr_unleveraged)
+            #         print("irr leveraged: ", irr_leveraged)
+            #         print("cap rate: ", cap_rate)
+            #         print("cash on cash return: ", coc)
+            #         df_out.loc[i, 'IRR (unleveraged)'] = irr_unleveraged
+            #         df_out.loc[i, 'IRR (leveraged)'] = irr_leveraged
+            #         df_out.loc[i, 'Cap Rate'] = cap_rate
+            #         df_out.loc[i, 'Cash On Cash Return'] = coc
+            #         time.sleep(5)
+            #     except:
+            #         pass
+            # # re-arranging the columns
+            # df_out = df_out[['zpid', 'Address', 'Price', 'IRR (unleveraged)', 'IRR (leveraged)', 'Cap Rate', 'Cash On Cash Return', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms', 'is_FSBA', 'is_newHome', 'is_openHouse']]
+            # df_out.to_csv("data/search_data_with_metrics.csv", index=False)
+            df_out = pd.read_csv("data/search_data_with_metrics.csv")
             st.markdown("#")
             st.markdown("---")
             st.markdown("#")
             st.markdown("<h2 style='text-align: center; color: black;'>Results</h2>", unsafe_allow_html=True)
             st.markdown("#")
-            st.dataframe(df_)
+            st.dataframe(df_out)
 
 
     with st.expander("Show the results in a map"):
         if st.checkbox("Show the results in a map"):
-            df = pd.read_csv("data/search_data.csv")
+            df = pd.read_csv("data/search_data_with_metrics.csv")
+            search = pd.read_csv("data/search_data.csv")
+            df["latitude"] = search["latitude"]
+            df["longitude"] = search["longitude"]
             px.set_mapbox_access_token(open("notebook/.mapbox_token").read())
-            fig = px.scatter_mapbox(df, lat="latitude", lon="longitude", color="price", size="price", hover_name="zpid", hover_data=["address", "price"], zoom=10, labels="zpid", height=600, color_continuous_scale=px.colors.cyclical.IceFire, size_max=15)
+            fig = px.scatter_mapbox(df, lat="latitude", lon="longitude", color="Price", size="Price", hover_name="zpid", hover_data=["Address", "Price", 'IRR (unleveraged)', 'IRR (leveraged)', 'Cap Rate', 'Cash On Cash Return'], zoom=10, labels="zpid", height=600, color_continuous_scale=px.colors.cyclical.IceFire, size_max=15)
             st.markdown("#")
             st.markdown("---")
             st.markdown("#")

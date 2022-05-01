@@ -30,3 +30,26 @@ class Metrics:
     @classmethod
     def xirr_dates(cls, dates):
         return [datetime.strptime(i, '%Y-%m-%d').date() for i in dates]
+
+    @classmethod
+    def cap_rate(cls, net_rents, purchase_price):
+        """
+        cap rate = annual net return / current market value
+        """
+        return np.round((np.sum(net_rents[:12]) / purchase_price)*100, 2)
+
+    @classmethod
+    def cash_on_cash_return(cls, net_rents, taxes, cash_invested):
+        """
+        CoC = Annual Pre-Tax Cash Flow / Total Cash Invested
+        APTCF = (GSR + OI) - (V + OE + AMP)
+        GSR = Gross Scheduled Rent
+        OI = Other Income
+        V = Vacancy
+        OE = Operating Expenses
+        AMP = Annual Mortgage Payment
+        """
+        """
+        """
+        aptcf = np.sum(net_rents[:12]) + np.sum(taxes[:12])
+        return np.round((aptcf / np.sum(cash_invested[:12]))*100, 2)
