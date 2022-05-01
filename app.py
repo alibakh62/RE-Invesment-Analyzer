@@ -1,6 +1,6 @@
 import pages.analysis
 import pages.default_assumptions
-import pages.investment_criteria_tmp
+import pages.property_details
 import pages.investment_criteria
 import pages.search
 
@@ -13,7 +13,7 @@ PAGES = {
     "Investment Criteria": pages.investment_criteria.app,
     # "Review Assumptions": pages.investment_criteria_tmp.app,
     "Search": pages.search.app,
-    "Property Details": pages.search.app,
+    "Property Details": pages.property_details.app,
     # "Property Investment Worksheet": pages.search.app,
     "Scenario Analysis": pages.analysis.app,
     "Comparative Analysis": pages.analysis.app,
