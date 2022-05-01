@@ -14,7 +14,7 @@ PAGES = {
     # "Review Assumptions": pages.investment_criteria_tmp.app,
     "Search": pages.search.app,
     "Property Details": pages.search.app,
-    "Property Investment Worksheet": pages.search.app,
+    # "Property Investment Worksheet": pages.search.app,
     "Scenario Analysis": pages.analysis.app,
     "Comparative Analysis": pages.analysis.app,
 }

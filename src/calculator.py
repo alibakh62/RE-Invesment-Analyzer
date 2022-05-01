@@ -25,7 +25,7 @@ investment_assumptions.renovation_costs = 4000
 # then, calculate the metrics as above.
 
 
-
+cash_flow = dp.get_cashflow()
 # Cap Rate
 Metrics.cap_rate(cash_flow['net_rents'], ua['purchase_price'])
 

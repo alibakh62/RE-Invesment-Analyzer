@@ -7,6 +7,7 @@ import json
 import plotly.express as px
 import src.api as api
 import time
+import pickle
 from src.utils import DataPrep, InvestmentAssumptions
 from src.metrics import Metrics
 import sys
@@ -189,6 +190,8 @@ def app():
             selected_properties = st.selectbox("Select zpid of the properties you want to analyze", df['zpid'], key="selected_properties")
             submit_selected_properties = st.form_submit_button("Submit")
             if submit_selected_properties:
+                with open("data/selected_properties.pkl", "wb") as f:
+                    pickle.dump(selected_properties, f)
                 st.success(f"You selected {selected_properties} properties")
     # else:
     #     st.write("No properties selected")
