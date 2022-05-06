@@ -1,21 +1,8 @@
 import streamlit as st
 import json
-from datetime import datetime
-import pandas as pd
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
-import time
-
-def handle_metric_select():
-    if st.session_state.inv_metric_select == "Cap Rate":
-        st.session_state.inv_metric_slider = "Please select min. Cap Rate (in %)"
-    elif st.session_state.inv_metric_select == "Cash On Cash Return":
-        st.session_state.inv_metric_slider = "Please select min. Cash On Cash Return (in %)"
-    elif st.session_state.inv_metric_select == "IRR Unleveraged":
-        st.session_state.inv_metric_slider = "Please select min. IRR Unleveraged (in %)"
-    elif st.session_state.inv_metric_select == "IRR Leveraged":
-        st.session_state.inv_metric_slider = "Please select min. IRR Leveraged (in %)"
 
 
 def app():
@@ -28,78 +15,88 @@ def app():
     user_metrics = {}
     user_finance = {}
 
+    with st.container():    
+        c1, c2, c3 = st.columns([1,1,1])
+        with c1:
+            inv_type = st.selectbox("Investment Type", ["Residential", "Commercial"], key="inv_type")
+        with c2:
+            if st.session_state.inv_type == "Residential":
+                list_of_metrics = ["Cap Rate", "Cash On Cash Return", "IRR Unleveraged", "IRR Leveraged"]
+            elif st.session_state.inv_type == "Commercial":
+                list_of_metrics = ["Metric 1", "Metric 2", "Metric 3", "Metric 4"]
+            inv_metric = st.selectbox(label="Select the investment metric:", options=list_of_metrics, key="inv_metric_select")
+        with c3:
+            min_inv_metric = st.slider(label=f"Choose minimum {st.session_state.inv_metric_select} (%)", min_value=0, max_value=100, key="min_inv_metric")
+
+    with st.expander("Metric Definition:"):
+        c1, c2, c3 = st.columns([1,1,1])
+        with c1:
+            if st.session_state.inv_metric_select == "Cap Rate":
+                st.markdown('**Capitalization rate** indicates the rate of return that is expected to be generated on a real estate investment property, [more](https://www.investopedia.com/terms/c/capitalizationrate.asp) ')
+                st.write('')
+                st.latex(r'''\text{Cap Rate} = \frac{\text{Net Operating Income}}{\text{Current Market Value}}''')
+            elif st.session_state.inv_metric_select == "Cash On Cash Return":
+                st.markdown('**Cash-on-cash return** measures the annual return the investor made on the property in relation to the amount of mortgage paid during the same year, [more](https://www.investopedia.com/terms/c/cashoncashreturn.asp) ')
+                st.write('')
+                st.latex(r'''\text{Cash On Cash Return} = \frac{\text{Annual Pre-Tax Cash Flow}}{\text{Total Cash Invested}}''')
+                st.write('')
+                st.markdown('***where:***')
+                st.latex(r'''\text{Annual Pre-Tax Cash Flow} = \text{Gross scheduled rent} + \text{Other income} - \text{Vacancy} - \text{Other expenses} - \text{Annual mortgage payments}''')
+            elif (st.session_state.inv_metric_select == "IRR Unleveraged") | (st.session_state.inv_metric_select == "IRR Leveraged"):
+                st.markdown('**IRR** is a discount rate that makes the net present value (NPV) of all cash flows equal to zero in a discounted cash flow analysis, [more](https://www.investopedia.com/terms/i/irr.asp) ')
+                st.write('')
+                st.latex(r'''0 = \text{NPV} = \sum\limits_{t=1}^{T} \frac{C_{t}}{(1+\text{IRR})^t} - C_0''')
+            else:
+                st.markdown("<p style='text-align: center; color: black;'>$Other definitions$</p>", unsafe_allow_html=True)
+
     with st.container():
-        st.markdown("<p style='text-align: center; color: grey;'>Please choose what type of investment:</p>", unsafe_allow_html=True)
+        st.markdown("""---""")
 
-        with st.container():
-            c1, c2, c3 = st.columns([3,1,3])
-
+    with st.container():
+        c1, c2, c3 = st.columns([1,1,1])
+        c2.markdown("<h3 style='text-align: center; color: black;'>Financials</h3>", unsafe_allow_html=True)
         with c1:
             st.write('')
-
         with c2:
-            placeholder = st.empty()
-            investment_type = placeholder.radio(label="", options=["Residential", "Commercial"], key="investment_type_radio")
-            investment_type_submit = placeholder.button("Submit", key="inv_type_button")	
-
+            eqt_pct = st.number_input("How much are planning to pay as down payment? (as % of purchase price)", value=0.5, key="eqt_pct")
+            amort_period = st.number_input("What mortgage duration (years) are you considering?", value=30, step=1, key="amort_period")
+            int_rate_on_debt = st.number_input("What's your mortgage rate?(%)", value=0.05, key="int_rate_on_debt")
+            extra_cash_reserves = st.number_input("How much cash reserves you have? ($)", value=2500, step=1_000, help="This refers to any liquid assests you have leftover after paying your down payment and closing costs.", key="extra_cash_reserves")
         with c3:
             st.write('')
 
-        if st.session_state.inv_type_button:
-            placeholder.empty()
-            inv_metric_select = placeholder.selectbox("Choose the investment metric:", ["Cap Rate", "Cash On Cash Return", "IRR Unleveraged", "IRR Leveraged"], on_change=handle_metric_select(), key="inv_metric_select")
-            inv_metric_min = placeholder.slider(label=st.session_state.inv_metric_slider, min_value=0, max_value=100, step=1, value=0, key="inv_metric_slider")
+    with st.container():
+        st.markdown("#")
 
+    with st.container():
+        c1, c2, c3 = st.columns([6,1,6])
 
-    # with st.container():
-    #     c1, c2, c3 = st.columns([1,2,1])
-    #     # c1.markdown("<h3 style='text-align: center; color: black;'>Financing</h3>", unsafe_allow_html=True)
-    #     c2.markdown("<h3 style='text-align: center; color: black;'>Investment Criteria</h3>", unsafe_allow_html=True)
-    #     # c3.markdown("<h3 style='text-align: center; color: black;'>Renovation Costs</h3>", unsafe_allow_html=True)
-    #     with c1:
-    #         st.write('')
-    #     with c2:
-    #         with st.form("Investment Criteria"):
-    #             cap_rate = st.slider("Min. Cap Rate (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-    #             coc = st.slider("Min. Cash on Cash Return (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-    #             irr_leveraged = st.slider("Min. IRR Leveraged (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-    #             irr_unleveraged = st.slider("Min. IRR Unleveraged (%)", min_value=0.0, max_value=1.0, value=0.25, step=0.01)
-    #             submitted_financing = st.form_submit_button("Submit")
-    #             if submitted_financing:
-    #                 user_metrics['cap_rate'] = cap_rate
-    #                 user_metrics['coc'] = coc
-    #                 user_metrics['irr_leveraged'] = irr_leveraged
-    #                 user_metrics['irr_unleveraged'] = irr_unleveraged
-    #                 with open('data/user_metrics.json', 'w') as f:
-    #                     json.dump(user_metrics, f)
-    #                 st.success("Your metrics have been saved.")
-    #     with c3:
-    #         st.write('')
+        with c1:
+            st.write('')
+        with c2:
+            submit_all = st.button("Submit", key="submit_all")
+            if submit_all:
+                user_metrics['metric_selected'] = st.session_state.inv_metric_select
+                user_metrics['metric_min'] = st.session_state.min_inv_metric
+                user_finance['eqt_pct'] = st.session_state.eqt_pct
+                user_finance['amort_period'] = st.session_state.amort_period
+                user_finance['int_rate_on_debt'] = st.session_state.int_rate_on_debt
+                user_finance['extra_cash_reserves'] = st.session_state.extra_cash_reserves
+                with open('data/user_metrics_new.json', 'w') as f:
+                    json.dump(user_metrics, f)
+                with open('data/user_finance_new.json', 'w') as f:
+                    json.dump(user_finance, f)
+        with c3:
+            st.write('')
 
-    # with st.container():
-    #     st.markdown("""---""")
-
-    # with st.container():
-    #     c1, c2, c3 = st.columns([1,2,1])
-    #     # c1.markdown("<h3 style='text-align: center; color: black;'>Financing</h3>", unsafe_allow_html=True)
-    #     c2.markdown("<h3 style='text-align: center; color: black;'>Financials</h3>", unsafe_allow_html=True)
-    #     # c3.markdown("<h3 style='text-align: center; color: black;'>Renovation Costs</h3>", unsafe_allow_html=True)
-    #     with c1:
-    #         st.write('')
-    #     with c2:
-    #         with st.form("Financing"):
-    #             eqt_pct = st.number_input("How much are planning to pay as down payment? (as % of purchase price)", value=0.5)
-    #             amort_period = st.number_input("What mortgage duration (years) are you considering?", value=30, step=1)
-    #             int_rate_on_debt = st.number_input("What's your mortgage rate?(%)", value=0.05)
-    #             extra_cash_reserves = st.number_input("How much cash reserves you have? ($)", value=2500, step=1_000, help="This refers to any liquid assests you have leftover after paying your down payment and closing costs.")
-    #             submitted_financing = st.form_submit_button("Submit")
-    #             if submitted_financing:
-    #                 user_finance['extra_cash_reserves'] = extra_cash_reserves
-    #                 user_finance['eqt_pct'] = eqt_pct
-    #                 user_finance['amort_period'] = amort_period
-    #                 user_finance['int_rate_on_debt'] = int_rate_on_debt
-    #                 with open('data/user_finance.json', 'w') as f:
-    #                     json.dump(user_finance, f)
-    #                 st.success("Your financing details have been saved.")
-    #     with c3:
-    #         st.write('')
+    with st.container():
+        c1, c2, c3 = st.columns([1,1,1])
+        with c1:
+            st.write('')
+            # st.write(user_metrics)
+        with c2:
+            if st.session_state.submit_all:
+                st.success("Your selections have been saved.")
+        with c3:
+            st.write('')
+            # st.write(user_finance)

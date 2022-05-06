@@ -12,7 +12,7 @@ st.set_page_config(layout="wide", page_title="Real Estate Investment Analyzer", 
 PAGES = {
     # "Default Assumptions": pages.default_assumptions.app,
     "Investment Criteria": pages.investment_criteria.app,
-    "Investment Criteria": pages.investment_criteria_deprecated.app,
+    "Investment Criteria_deprecated": pages.investment_criteria_deprecated.app,
     # "Review Assumptions": pages.investment_criteria_tmp.app,
     "Search": pages.search.app,
     "Property Details": pages.property_details.app,
@@ -22,6 +22,6 @@ PAGES = {
 }
 
 st.sidebar.title("Menu")
-selection = st.sidebar.radio("Pages", list(PAGES.keys()))
+selection = st.sidebar.selectbox("Pages", list(PAGES.keys()))
 page = PAGES[selection]
 page()
