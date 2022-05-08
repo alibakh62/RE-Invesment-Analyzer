@@ -4,6 +4,7 @@ import pages.property_details
 import pages.investment_criteria_deprecated
 import pages.investment_criteria
 import pages.search
+import pages.search_deprecated
 
 import streamlit as st
 
@@ -15,6 +16,7 @@ PAGES = {
     "Investment Criteria_deprecated": pages.investment_criteria_deprecated.app,
     # "Review Assumptions": pages.investment_criteria_tmp.app,
     "Search": pages.search.app,
+    "Search_deprecated": pages.search_deprecated.app,
     "Property Details": pages.property_details.app,
     # "Property Investment Worksheet": pages.search.app,
     "Scenario Analysis": pages.analysis.app,

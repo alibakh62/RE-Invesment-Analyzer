@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
@@ -7,6 +8,7 @@ import numpy as np
 import pandas as pd
 import numpy_financial as npf
 from datetime import datetime
+from src.config import *
 import src.api as api
 
 from scipy.optimize import anderson
@@ -17,8 +19,8 @@ class InvestmentAssumptions:
 
     def __init__(self, modify_assumptions=False):
         self.modify_assumptions = modify_assumptions
-        self.search_filepath = 'data/search_data.csv'
-        self.user_finance_filepath = 'data/user_finance.json'
+        self.search_filepath = os.path.join(BASE_DIR, PROP_SEARCH)
+        self.user_finance_filepath = os.path.join(BASE_DIR, USER_FINANCE)
         self.user_finance = None
         self.property_details = None
         self.rent_data = None
@@ -325,11 +327,11 @@ class DataPrep:
                     unlevered_amt = cash_flow['net_rent_debt_services'][i] + cash_flow['net_proceeds'][i]
                 cash_flow['cash_flow_leveraged'].append(unlevered_amt)
         self.cash_flow = cash_flow
-        with open('data/user_assumptions_output.pkl', 'wb') as f:
+        with open(os.path.join(BASE_DIR, USER_ASSUMPTIONS), 'wb') as f:
             pickle.dump(self.user_assumptions, f)
-        with open('data/cash_flow_output.pkl', 'wb') as f:
+        with open(os.path.join(BASE_DIR, CASH_FLOW), 'wb') as f:
             pickle.dump(self.cash_flow, f)
-        with open('data/amortization_output.pkl', 'wb') as f:
+        with open(os.path.join(BASE_DIR, AMORTIZATION), 'wb') as f:
             pickle.dump(self.amortization, f)
         return cash_flow
 

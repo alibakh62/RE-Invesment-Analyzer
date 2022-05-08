@@ -1,5 +1,7 @@
+import os
 import streamlit as st
 import json
+from src.config import *
 import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
@@ -82,9 +84,11 @@ def app():
                 user_finance['amort_period'] = st.session_state.amort_period
                 user_finance['int_rate_on_debt'] = st.session_state.int_rate_on_debt
                 user_finance['extra_cash_reserves'] = st.session_state.extra_cash_reserves
-                with open('data/user_metrics_new.json', 'w') as f:
+                # st.write(user_metrics)
+                # st.write(user_finance)
+                with open(os.path.join(BASE_DIR, USER_METRICS), 'w') as f:
                     json.dump(user_metrics, f)
-                with open('data/user_finance_new.json', 'w') as f:
+                with open(os.path.join(BASE_DIR, USER_FINANCE), 'w') as f:
                     json.dump(user_finance, f)
         with c3:
             st.write('')
