@@ -54,6 +54,8 @@ def calc_metrics(df_, save_filename=None):
             zpid = int(row['zpid'])
             logging.info(f"Calculating metrics for zpid {zpid}")
             dp = DataPrep(zpid)
+            with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}_{str(zpid)}.json", "w") as f:
+                json.dump(dp.property_details, f)
             cash_flow = dp.get_cashflow()
             cash_flow_unleveraged = cash_flow['cash_flow_unleveraged']
             cash_flow_leveraged = cash_flow['cash_flow_leveraged']

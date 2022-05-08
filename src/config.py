@@ -28,3 +28,5 @@ elif DEBUG_MODE == 'TEST':
     LOG_DIR='../logs'
 LOG_PROP_DETAILS='prop_details_log'
 SELECTED_PROPERTY=f'selected_property_{version}.pkl'
+PROP_DETAIL_RESPONSE="prop_details"
+PROP_IMAGES="images"
