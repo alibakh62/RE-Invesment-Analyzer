@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 import json
 import requests
 import shutil
@@ -38,15 +39,30 @@ def app():
     """
     This page will show property details info
     """
-    with open('data/selected_properties.pkl', 'rb') as f:
-        zpid = pickle.load(f)
-    prop_det = api.property_detail(zpid).json()
-    if not os.path.exists(f"data/images/{str(zpid)}"):
-        images = api.property_image(zpid).json()
-        for image_url in images['images']:
-            download_images(image_url, zpid)
-    st.markdown("<h1 style='text-align: center; color: black;'>Images</h1>", unsafe_allow_html=True)
-    list_of_images = os.listdir(f"data/images/{str(zpid)}")
-    for image in list_of_images:
-        st.image(f"data/images/{str(zpid)}/{image}")
-    pass
+    selected = option_menu(
+        menu_title=None,
+        options=["Property Information", "Neighborhood Information", "Tax Information", "Property Images"],
+        icons=["house", "geo", "bank", "image"],
+        default_index=0,
+        orientation="horizontal",
+        # for more styling refer to: https://github.com/victoryhb/streamlit-option-menu
+    )
+    if selected == "Property Information":
+        st.title("Property Information")
+    elif selected == "Neighborhood Information":
+        st.title("Neighborhood Information")
+    elif selected == "Tax Information":
+        st.title("Tax Information")
+    elif selected == "Property Images":
+        with open('data/selected_properties.pkl', 'rb') as f:
+            zpid = pickle.load(f)
+        prop_det = api.property_detail(zpid).json()
+        if not os.path.exists(f"data/images/{str(zpid)}"):
+            images = api.property_image(zpid).json()
+            for image_url in images['images']:
+                download_images(image_url, zpid)
+        st.markdown("<h1 style='text-align: center; color: black;'>Images</h1>", unsafe_allow_html=True)
+        list_of_images = os.listdir(f"data/images/{str(zpid)}")
+        for image in list_of_images:
+            st.image(f"data/images/{str(zpid)}/{image}")
+        pass
