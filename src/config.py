@@ -9,7 +9,6 @@ elif DEBUG_MODE == 'PROD':
     BASE_DIR='data'
 elif DEBUG_MODE == 'TEST':
     BASE_DIR='../data'
-GET_FROM_API = False
 USER_METRICS=f'user_metrics_{version}.json'
 USER_FINANCE=f'user_finance_{version}.json'
 PROP_SEARCH=f'search_data_{version}.csv'

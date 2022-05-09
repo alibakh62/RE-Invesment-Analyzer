@@ -32,8 +32,8 @@ def cleanup_query_results(df, save_filename=None):
     cols = ['zpid', 'address', 'price', 'livingArea', 'lotAreaValue', 'bedrooms', 'bathrooms']
     df_ = df[cols]
     df_.columns = ['zpid', 'Address', 'Price', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms']
-    df_["Living Area (sqft)"] = df_["Living Area (sqft)"].astype(int)
-    df_["Lot Area (sqft)"] = df_["Lot Area (sqft)"].astype(int)
+    df_.loc[:,"Living Area (sqft)"] = df_["Living Area (sqft)"].astype(int)
+    df_.loc[:,"Lot Area (sqft)"] = df_["Lot Area (sqft)"].astype(int)
     if save_filename is not None:
         df_.to_csv(os.path.join(BASE_DIR, save_filename), index=False)
     else:
@@ -54,8 +54,6 @@ def calc_metrics(df_, save_filename=None):
             zpid = int(row['zpid'])
             logging.info(f"Calculating metrics for zpid {zpid}")
             dp = DataPrep(zpid)
-            with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}_{str(zpid)}.json", "w") as f:
-                json.dump(dp.property_details, f)
             cash_flow = dp.get_cashflow()
             cash_flow_unleveraged = cash_flow['cash_flow_unleveraged']
             cash_flow_leveraged = cash_flow['cash_flow_leveraged']
@@ -65,18 +63,22 @@ def calc_metrics(df_, save_filename=None):
             irr_leveraged = np.round((Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr))*100, 2)
             cap_rate = Metrics.cap_rate(cash_flow['net_rents'], row['Price'])
             coc = Metrics.cash_on_cash_return(cash_flow['net_rents'], cash_flow['less_taxes'], cash_flow['cash_invested'])
-            logging.info("irr unleveraged: ", irr_unleveraged)
-            logging.info("irr leveraged: ", irr_leveraged)
-            logging.info("cap rate: ", cap_rate)
-            logging.info("cash on cash return: ", coc)
+            logging.info(f"irr unleveraged: {irr_unleveraged}")
+            logging.info(f"irr leveraged: {irr_leveraged}")
+            logging.info(f"cap rate: {cap_rate}")
+            logging.info(f"cash on cash return: {coc}")
+            logging.info("="*50)
             df_out.loc[i, 'IRR (unleveraged)'] = irr_unleveraged
             df_out.loc[i, 'IRR (leveraged)'] = irr_leveraged
             df_out.loc[i, 'Cap Rate'] = cap_rate
             df_out.loc[i, 'Cash On Cash Return'] = coc
+            with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}/{str(zpid)}.json", "w") as f:
+                json.dump(dp.prop_detail, f)
             time.sleep(5)
             progress_bar.progress(i+1)
-        except:
-            pass
+        except Exception as e:
+            print(e)
+            logging.error(f"Error calculating metrics for zpid {zpid}")
     # re-arranging the columns
     df_out = df_out[['zpid', 'Address', 'Price', 'IRR (unleveraged)', 'IRR (leveraged)', 'Cap Rate', 'Cash On Cash Return', 'Living Area (sqft)', 'Lot Area (sqft)', 'Bedrooms', 'Bathrooms']]
     df_out.to_csv(os.path.join(BASE_DIR, PROP_SEARCH_WITH_METRICS), index=False)
@@ -110,8 +112,13 @@ def app():
     """
     st.markdown("<h1 style='text-align: center; color: black;'>Search</h1>", unsafe_allow_html=True)
 
-    # st text input
-    address = st.text_input("Enter an address, neighborhood, city, or zip code", key="search_address", placeholder="Dallas, TX")
+    # Search by address
+    with st.container():
+        c1, c2 = st.columns([7,2])
+    with c1:
+        address = st.text_input("Enter an address, neighborhood, city, or zip code", key="search_address", placeholder="Dallas, TX")
+    with c2:
+        st.selectbox("Allow API call", ["Yes", "No"], key="GET_FROM_API")
     st.markdown("#")
     with st.container():
         c1, c2, c3 = st.columns([1,1,1])
@@ -172,8 +179,10 @@ def app():
         query['build_year'] = st.session_state.build_year
         query['days_on_zillow'] = st.session_state.days_on_zillow
 
+        logging.info(f"query sent to the API: \n {query}")
+
         # query API
-        if GET_FROM_API:
+        if st.session_state.GET_FROM_API:
             response = api.property_search(query)
             # storing the response for further use
             with open(f'{BASE_DIR}/{PROP_SEARCH_RESPONSE}', 'w') as f:

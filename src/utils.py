@@ -14,6 +14,17 @@ import src.api as api
 from scipy.optimize import anderson
 import json
 
+import logging
+
+# logdatetime = time.strftime("%m%d%Y_%H%M%S")
+logdatetime = time.strftime("%m%d%Y")
+logging.basicConfig(level=logging.INFO, 
+		    format='%(asctime)s %(message)s', 
+		    datefmt='%m/%d/%Y %I:%M:%S %p', 
+		    filename= f"{LOG_DIR}/{LOG_PROP_DETAILS}_{logdatetime}.log", 
+		    filemode='w',
+		    force=True)
+
 
 class InvestmentAssumptions:
 
@@ -47,7 +58,7 @@ class InvestmentAssumptions:
         self.property_manager_rate = 0.01
         self.utilities = 40
         self.discount_rate = 0.075
-
+	
 
     def set_renovation_assumptions(self, renovation_costs, renovation_period, exit_renovation_cost):
         self.renovation_costs = renovation_costs
@@ -127,6 +138,7 @@ class DataPrep:
         self.user_assumptions = None
         self.amortization = None
         self.cash_flow = None
+        self.prop_detail = None
         self.investment_assumptions = investment_assumptions
 
     def np_encoder(self, object):
@@ -159,12 +171,13 @@ class DataPrep:
         int_rate = assumptions.get_user_finance_assumptions()['int_rate_on_debt']
         price = assumptions.get_listing_price(self.zpid)
         try:
-            print(assumptions.get_rent_estimate(self.zpid))
+            # print(assumptions.get_rent_estimate(self.zpid))
             rent = assumptions.get_rent_estimate(self.zpid)['rent']
         except KeyError:
             rent = assumptions.get_rent_estimate(self.zpid)['median']
         insurance = assumptions.get_insurance(self.zpid)
         tax_rate = assumptions.get_tax_rate(self.zpid)['tax_rate']
+        self.prop_detail = assumptions.property_details
         if assumptions.closing_costs_ == None:
             closing_costs = np.round(0.015*price, 0)
         else:
@@ -235,6 +248,7 @@ class DataPrep:
         return amortization
 
     def get_cashflow(self):
+        logging.info(f'Getting cashflow for {self.zpid}')
         cash_flow = {}
         if self.user_assumptions is None:
             self.get_assumptions()

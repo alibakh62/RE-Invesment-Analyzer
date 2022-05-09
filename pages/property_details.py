@@ -84,7 +84,7 @@ def app():
     with open(f'{BASE_DIR}/{SELECTED_PROPERTY}', 'rb') as f:
         zpid = pickle.load(f)
     try:
-        with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}_{str(zpid)}.json", "r") as f:
+        with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}/{str(zpid)}.json", "r") as f:
                 prop_det = json.load(f)
     except:
         prop_det = api.property_detail(zpid).json()
