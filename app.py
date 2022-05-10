@@ -1,5 +1,6 @@
 import pages.analysis
 import pages.analysis_deprecated
+import pages.analysis_multiple
 import pages.default_assumptions
 import pages.property_details
 import pages.investment_criteria_deprecated
@@ -22,6 +23,7 @@ PAGES = {
     "Property Details": pages.property_details.app,
     # "Property Investment Worksheet": pages.search.app,
     "Scenario Analysis": pages.analysis.app,
+    "Scenario Analysis 1+": pages.analysis_multiple.app,
     # "Scenario Analysis-deprecated": pages.analysis_deprecated.app,
     "Comparative Analysis": pages.analysis.app,
 }
