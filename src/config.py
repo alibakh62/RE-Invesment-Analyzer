@@ -17,6 +17,7 @@ PROP_SEARCH_REFINED=f'search_data_refined_{version}.csv'
 PROP_SEARCH_WITH_METRICS=f'search_data_with_metrics_{version}.csv'
 PROP_SEARCH_WITH_METRICS_FILTERED=f'search_data_with_metrics_filtered_{version}.csv'
 USER_ASSUMPTIONS=f'user_assumptions_output_{version}.pkl'
+USER_ASSUMPTIONS_MODIFIED=f'user_assumptions_modified_{version}.pkl'
 CASH_FLOW=f'cash_flow_output_{version}.pkl'
 AMORTIZATION=f'amortization_output_{version}.pkl'
 if DEBUG_MODE == 'DEV':

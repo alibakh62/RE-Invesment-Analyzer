@@ -138,7 +138,7 @@ class DataPrep:
         self.user_assumptions = None
         self.amortization = None
         self.cash_flow = None
-        self.prop_detail = None
+        self.prop_detail = None  #TODO: every time called try to read from file, if not, call api
         self.investment_assumptions = investment_assumptions
 
     def np_encoder(self, object):
