@@ -63,7 +63,7 @@ if check_password():
             menu_title="Investoria",
             options=list(PAGES.keys()),
             icons=["sliders", "search", "house", "graph-up-arrow", "bar-chart"],
-            default_index=1,
+            default_index=0,
         )
 
     page = PAGES[selected]
