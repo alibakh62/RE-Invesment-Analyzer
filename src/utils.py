@@ -10,6 +10,7 @@ import numpy_financial as npf
 from datetime import datetime
 from src.config import *
 import src.api as api
+from src.metrics import Metrics
 
 from scipy.optimize import anderson
 import json
@@ -80,10 +81,31 @@ class InvestmentAssumptions:
         self.discount_rate = discount_rate
         self.closing_costs_ = closing_costs_
 
+    def get_property_type(self, zpid):
+        if self.property_details is None:
+            self.property_details = api.property_detail(zpid).json()
+        return self.property_details['propertyTypeDimension']
+
+    def get_property_address(self, zpid):
+        if self.property_details is None:
+            self.property_details = api.property_detail(zpid).json()
+        address = self.property_details['address']
+        return address['streetAddress'] + ", " + address['city'] + ", " + address['state'] + " " + address['zipcode']
+
+    def get_no_bedrooms(self, zpid):
+        if self.property_details is None:
+            self.property_details = api.property_detail(zpid).json()
+        return self.property_details['resoFacts']['bedrooms']
+
+    def get_no_bathrooms(self, zpid):
+        if self.property_details is None:
+            self.property_details = api.property_detail(zpid).json()
+        return self.property_details['resoFacts']['bathrooms']
+
     def get_listing_price(self, zpid):
-        if self.search_data is None:
-            self.search_data = pd.read_csv(self.search_filepath)
-        return self.search_data.loc[self.search_data["zpid"] == zpid, "price"].values[0]
+        if self.property_details is None:
+            self.property_details = api.property_detail(zpid).json()
+        return self.property_details['price']
 
     def get_tax_rate(self, zpid):
         tax_info = {}
@@ -100,18 +122,14 @@ class InvestmentAssumptions:
 
     def get_rent_estimate(self, zpid):
         if self.rent_data is None:
-            if self.search_data is None:
-                self.search_data = pd.read_csv(self.search_filepath)
-            property_type = self.search_data.loc[self.search_data["zpid"] == zpid, "propertyType"].values[0]
-            address = self.search_data.loc[self.search_data["zpid"] == zpid, "address"].values[0]
-            beds = self.search_data.loc[self.search_data["zpid"] == zpid, "bedrooms"].values[0]
-            baths = self.search_data.loc[self.search_data["zpid"] == zpid, "bathrooms"].values[0]  
-
+            property_type = self.get_property_type(zpid)
+            address = self.get_property_address(zpid)
+            beds = self.get_no_bedrooms(zpid)
+            baths = self.get_no_bathrooms(zpid)
             # creating a mapping between standard property types across different APIs
-            property_type0 = ["SINGLE_FAMILY", "CONDO", "TOWNHOUSE", "MULTI_FAMILY"]
+            property_type0 = ["Single Family", "Condo", "Townhouse", "Multi Family"]
             property_type1 = ["SingleFamily", "Condo", "Townhouse", "MultiFamily"]
             property_type_mapping = dict(zip(property_type0, property_type1))
-
             rent_res = api.rent_estimate(property_type_mapping[property_type], address, beds, baths)
             self.rent_data = rent_res.json()
         return self.rent_data
@@ -348,4 +366,17 @@ class DataPrep:
         with open(os.path.join(BASE_DIR, AMORTIZATION), 'wb') as f:
             pickle.dump(self.amortization, f)
         return cash_flow
+
+    def get_metrics(self):
+        cash_flow = self.get_cashflow()
+        price = self.prop_detail['price']
+        cash_flow_unleveraged = cash_flow['cash_flow_unleveraged']
+        cash_flow_leveraged = cash_flow['cash_flow_leveraged']
+        dates = cash_flow['dates']
+        dates_xirr = Metrics.xirr_dates(dates)
+        irr_unleveraged = np.round((Metrics.xirr(values=cash_flow_unleveraged, dates=dates_xirr))*100, 2)
+        irr_leveraged = np.round((Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr))*100, 2)
+        cap_rate = Metrics.cap_rate(cash_flow['net_rents'], price)
+        coc = Metrics.cash_on_cash_return(cash_flow['net_rents'], cash_flow['less_taxes'], cash_flow['cash_invested'])
+        return irr_unleveraged, irr_leveraged, cap_rate, coc
 

@@ -73,3 +73,17 @@ def rent_estimate(property_type, address, beds=3, baths=2):
 
     response = requests.request("GET", url, headers=headers, params=querystring)
     return response
+
+
+def search_by_mls(mls_number):
+    url = "https://zillow-com1.p.rapidapi.com/propertyByMls"
+
+    querystring = {"mls": f"{str(mls_number)}"}
+
+    headers = {
+        "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
+        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
+    }
+
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    return response
