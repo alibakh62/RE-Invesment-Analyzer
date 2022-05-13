@@ -16,6 +16,11 @@ import sys
 sys.path.insert(0, '.')
 sys.path.insert(0, '..')
 
+
+#TODO: Add aggrid so that user can directly select from the table.
+#TODO: User should be able to select multiple (up to 5) properties.
+
+
 import logging
 
 # logdatetime = time.strftime("%m%d%Y_%H%M%S")

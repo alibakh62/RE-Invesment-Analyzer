@@ -61,25 +61,25 @@ class InvestmentAssumptions:
         self.discount_rate = 0.075
 	
 
-    def set_renovation_assumptions(self, renovation_costs, renovation_period, exit_renovation_cost):
-        self.renovation_costs = renovation_costs
-        self.renovation_period = renovation_period
-        self.exit_renovation_cost = exit_renovation_cost
+    # def set_renovation_assumptions(self, renovation_costs, renovation_period, exit_renovation_cost):
+    #     self.renovation_costs = renovation_costs
+    #     self.renovation_period = renovation_period
+    #     self.exit_renovation_cost = exit_renovation_cost
 
-    def set_exit_assumptions(self, MAX_HOLD, length_of_hold, appreciation, cost_of_sale):
-        self.MAX_HOLD = MAX_HOLD
-        self.length_of_hold = length_of_hold
-        self.appreciation = appreciation
-        self.cost_of_sale = cost_of_sale
+    # def set_exit_assumptions(self, MAX_HOLD, length_of_hold, appreciation, cost_of_sale):
+    #     self.MAX_HOLD = MAX_HOLD
+    #     self.length_of_hold = length_of_hold
+    #     self.appreciation = appreciation
+    #     self.cost_of_sale = cost_of_sale
 
-    def set_other_assumptions(self, closing_costs_, vacancy_rate, rent_growth_rate, repair_allowance, property_manager_rate, utilities, discount_rate):
-        self.vacancy_rate = vacancy_rate
-        self.rent_growth_rate = rent_growth_rate
-        self.repair_allowance = repair_allowance
-        self.property_manager_rate = property_manager_rate
-        self.utilities = utilities
-        self.discount_rate = discount_rate
-        self.closing_costs_ = closing_costs_
+    # def set_other_assumptions(self, closing_costs_, vacancy_rate, rent_growth_rate, repair_allowance, property_manager_rate, utilities, discount_rate):
+    #     self.vacancy_rate = vacancy_rate
+    #     self.rent_growth_rate = rent_growth_rate
+    #     self.repair_allowance = repair_allowance
+    #     self.property_manager_rate = property_manager_rate
+    #     self.utilities = utilities
+    #     self.discount_rate = discount_rate
+    #     self.closing_costs_ = closing_costs_
 
     def get_property_type(self, zpid):
         if self.property_details is None:

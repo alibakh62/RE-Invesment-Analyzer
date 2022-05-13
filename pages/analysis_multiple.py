@@ -15,6 +15,15 @@ from src.config import *
 import src.api as api
 import time
 
+#TODO: Make it two tabs, in one tab, show metrics based on properties selected in the Search page, and in the other tab, show metrics based on their manual input.
+#TODO: It's very slow, optimizing time.sleep() could help, right now I have it everywhere
+#TODO: Need to add logging
+#TODO: Add the a button to save the favorite scenarios
+#TODO: I need to hit submit twice to see the metrics updated
+#TODO: Display what assumptions the user is changing
+#TODO: Make sure the user knows the delta values are with respect to the original numbers
+#TODO: Redue the distance between the metric containers
+
 
 def delta_metrics(orig, new):
     return np.round(((new - orig) / orig)*100, 2)
@@ -57,35 +66,43 @@ def app():
     #     zpid = pickle.load(f)
     with open(f'{BASE_DIR}/{USER_FINANCE}', 'r') as f:
         user_finance = json.load(f)
-    df = pd.read_csv(f'{BASE_DIR}/{PROP_SEARCH_WITH_METRICS_FILTERED}')
     if 'zpid_selected' not in st.session_state:
         st.session_state["zpid_selected"] = []
     mls_selected = st.text_input('Enter MLS number', help='For analyzing multiple properties, enter MLS number separated by comma (,).')
     submit_mls = st.button('Submit', key='submit_mls')
-    if submit_mls:
+    if (st.session_state.submit_mls) | (len(st.session_state.zpid_selected) != 0):
         if len(mls_selected.split(',')) == 0:
             st.error('Please enter at least one MLS number.')
         else:
             mls_list = mls_selected.split(',')
+            mls_list = [x.strip() for x in mls_list]
             # get zpid for each mls number
             zpid_selected = []
             with open(f'{BASE_DIR}/{MLS_ZPID}', 'r') as f:
                 mls_zpid_mapping = json.load(f)
             for mls in mls_list:
+                print("mls: ", mls)
                 try:
                     zpid = mls_zpid_mapping[mls]  # first check if we already have the mapping
                 except KeyError:
-                    zpid = api.search_by_mls(mls).json()['zpid']
-                except TypeError:
-                    zpid = api.search_by_mls(mls).json()[0]['zpid']
-                mls_zpid_mapping[mls] = zpid
-                zpid_selected.append(zpid)
+                        try:
+                            zpid = api.search_by_mls(mls).json()['zpid']
+                        except KeyError:
+                            st.error(f"no zpid found for mls: {mls}")
+                            zpid = ""
+                        except TypeError:
+                            zpid = api.search_by_mls(mls).json()[0]['zpid']
+                        
+                if zpid != "":
+                    mls_zpid_mapping[mls] = zpid
+                    zpid_selected.append(zpid)
                 time.sleep(5)
             with open(f'{BASE_DIR}/{MLS_ZPID}', 'w') as f:
                 json.dump(mls_zpid_mapping, f)
             address, price, irr_u, irr_l, cap_rate, coc = [], [], [], [], [], []
             # initial metric values based on non-modified assumptions
             st.session_state["zpid_selected"] = zpid_selected
+            print("zpid_selected first: ", zpid_selected)
             if 'irr_u' not in st.session_state:
                 st.session_state["irr_u"] = []
             if 'irr_l' not in st.session_state:
@@ -95,15 +112,15 @@ def app():
             if 'coc' not in st.session_state:
                 st.session_state["coc"] = []
             if 'irr_u_delta' not in st.session_state:
-                st.session_state["irr_u_delta"] = [0]*len(zpid_selected)
+                st.session_state["irr_u_delta"] = [0]*len(st.session_state.zpid_selected)
             if 'irr_l_delta' not in st.session_state:
-                st.session_state["irr_l_delta"] = [0]*len(zpid_selected)
+                st.session_state["irr_l_delta"] = [0]*len(st.session_state.zpid_selected)
             if 'cap_rate_delta' not in st.session_state:
-                st.session_state["cap_rate_delta"] = [0]*len(zpid_selected)
+                st.session_state["cap_rate_delta"] = [0]*len(st.session_state.zpid_selected)
             if 'coc_delta' not in st.session_state:
-                st.session_state["coc_delta"] = [0]*len(zpid_selected)
+                st.session_state["coc_delta"] = [0]*len(st.session_state.zpid_selected)
             if 'cash_flow' not in st.session_state:
-                st.session_state["cash_flow"] = [None]*len()
+                st.session_state["cash_flow"] = [None]*len(st.session_state.zpid_selected)
             if 'address' not in st.session_state:
                 st.session_state["address"] = []
             if 'price' not in st.session_state:
@@ -113,7 +130,7 @@ def app():
                 irr_u_i, irr_l_i, cap_rate_i, coc_i = dp.get_metrics()
                 print(zpid)
                 print(irr_u_i, irr_l_i, cap_rate_i, coc_i)
-                print("="*50)
+                # print("="*50)
                 st.session_state.irr_u.append(irr_u_i)
                 st.session_state.irr_l.append(irr_l_i)
                 st.session_state.cap_rate.append(cap_rate_i)
@@ -123,14 +140,16 @@ def app():
                 st.session_state.address.append(address_i)
                 st.session_state.price.append(prop_det['price'])
                 time.sleep(5)
-
-        st.write(st.session_state)
+        print(f"zpid_selected: {st.session_state.zpid_selected}")
+        print(f"irr_u: {st.session_state.irr_u}")
+        print(f"irr_u_delta: {st.session_state.irr_u_delta}")
+        print("="*50)
         for i in range(len(st.session_state.zpid_selected)):
             st.markdown("#")
             with st.container():
                 c1, c2, c3, c4, c5 = st.columns([3,2,2,2,2])
                 c1.subheader(f"Property {i+1}")
-                c1.caption(f"{address[i]}")
+                c1.caption(f"{st.session_state.address[i]}")
                 c2.metric("IRR (unleveraged)", f"{st.session_state.irr_u[i]} %", f"{st.session_state.irr_u_delta[i]} %")
                 c3.metric("IRR (leveraged)", f"{st.session_state.irr_l[i]} %", f"{st.session_state.irr_l_delta[i]} %")
                 c4.metric("Cap Rate", f"{st.session_state.cap_rate[i]} %", f"{st.session_state.cap_rate_delta[i]} %")
@@ -139,9 +158,11 @@ def app():
                 # st.markdown("#")
                 st.markdown("---")
                 # st.markdown("#")
+    else:
+        st.error('Please enter at least one MLS number.')
 
-        with st.expander("Scenario Description"):
-            # with st.form("Modify Assumptions"):
+    with st.expander("Scenario Assumptions"):
+        with st.form("Modify Assumptions"):
             modified_assumptions = {
                 'eqt_pct': user_finance['eqt_pct'],
                 'cash_reserves': user_finance['extra_cash_reserves'],
@@ -185,8 +206,8 @@ def app():
                 with c1:
                     st.write('')
                 with c2:
-                    # submit_button = st.form_submit_button("Submit")
-                    submit_button = st.button("Submit")
+                    submit_button = st.form_submit_button("Submit")
+                    # submit_button = st.button("Submit")
                 with c3:
                     st.write('')
                 if submit_button:
@@ -209,8 +230,8 @@ def app():
                     # calculating the metrics based on new assumptions
                     irr_u_new_lst, irr_l_new_lst, cap_rate_new_lst, coc_new_lst = [], [], [], []
                     irr_u_delta_lst, irr_l_delta_lst, cap_rate_delta_lst, coc_delta_lst = [], [], [], []
-                    for i, zpid in enumerate(zpid_selected):
-                        irr_u_new, irr_l_new, cap_rate_new, coc_new, cash_flow = update_metrics(modified_assumptions, price[i], zpid)
+                    for i, zpid in enumerate(st.session_state.zpid_selected):
+                        irr_u_new, irr_l_new, cap_rate_new, coc_new, cash_flow = update_metrics(modified_assumptions, st.session_state.price[i], zpid)
                         irr_u_new_lst.append(irr_u_new)
                         irr_l_new_lst.append(irr_l_new)
                         cap_rate_new_lst.append(cap_rate_new)
@@ -228,6 +249,15 @@ def app():
                     st.session_state.irr_l = irr_l_new_lst
                     st.session_state.cap_rate = cap_rate_new_lst
                     st.session_state.coc = coc_new_lst
+                    st.session_state.address = []
+                    st.session_state.price = []
+                    st.write(st.session_state)
+    
+    # clearing cache
+    st.button("Reset", key='reset')
+    if st.session_state.reset:
+        for k in st.session.state.keys():
+            st.session_state[k] = None
 
     # st.markdown("#")
     # with st.container():

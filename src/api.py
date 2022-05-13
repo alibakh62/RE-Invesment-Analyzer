@@ -1,6 +1,6 @@
 import requests
 import json
-
+import time
 
 def property_search(query):
     # extended property search
@@ -29,6 +29,7 @@ def property_search(query):
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
+    time.sleep(2)
     return response
 
 
@@ -44,6 +45,7 @@ def property_detail(zpid):
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
+    time.sleep(2)
     return response
 
 
@@ -58,6 +60,7 @@ def property_image(zpid):
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
+    time.sleep(2)
     return response
 
 
@@ -72,6 +75,7 @@ def rent_estimate(property_type, address, beds=3, baths=2):
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
+    time.sleep(2)
     return response
 
 
@@ -86,4 +90,5 @@ def search_by_mls(mls_number):
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
+    time.sleep(2)
     return response
