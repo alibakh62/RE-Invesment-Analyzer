@@ -25,7 +25,7 @@ def property_search(query):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
+        "X-RapidAPI-Key": "<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -41,7 +41,7 @@ def property_detail(zpid):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
+        "X-RapidAPI-Key": "<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -56,7 +56,7 @@ def property_image(zpid):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
+        "X-RapidAPI-Key": "<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -71,7 +71,7 @@ def rent_estimate(property_type, address, beds=3, baths=2):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
+        "X-RapidAPI-Key": "<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -86,7 +86,7 @@ def search_by_mls(mls_number):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "a271625fdbmsh9c07327c04cb02bp1314d1jsn9ac44145b089"
+        "X-RapidAPI-Key": "<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
