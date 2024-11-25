@@ -13,9 +13,13 @@ from src.utils import DataPrep, InvestmentAssumptions
 from src.metrics import Metrics
 from src.config import *
 import time
-
+import logging
 
 def delta_metrics(orig, new):
+    if orig is None or new is None:
+        return None
+    if orig == 0:
+        return float('inf') if new > 0 else float('-inf') if new < 0 else 0
     return np.round(((new - orig) / orig)*100, 2)
 
 
@@ -41,8 +45,12 @@ def update_metrics(modified_assumptions, price, zpid):
     dates = cash_flow['dates']
     dates_xirr = Metrics.xirr_dates(dates)
 
-    irr_u_new = np.round((Metrics.xirr(values=cash_flow_unleveraged, dates=dates_xirr))*100, 2)
-    irr_l_new = np.round((Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr))*100, 2)
+    # Calculate IRRs with error handling
+    irr_u = Metrics.xirr(values=cash_flow_unleveraged, dates=dates_xirr)
+    irr_l = Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr)
+    
+    irr_u_new = np.round(irr_u * 100, 2) if irr_u is not None else None
+    irr_l_new = np.round(irr_l * 100, 2) if irr_l is not None else None
     cap_rate_new = Metrics.cap_rate(cash_flow['net_rents'], price)
     coc_new = Metrics.cash_on_cash_return(cash_flow['net_rents'], cash_flow['less_taxes'], cash_flow['cash_invested'])
     return irr_u_new, irr_l_new, cap_rate_new, coc_new, cash_flow
@@ -52,129 +60,146 @@ def app():
     """
     In this page, we will do scenario analysis for a selected property.
     """
-    with open(f'{BASE_DIR}/{SELECTED_PROPERTY}', 'rb') as f:
-        zpid = pickle.load(f)
-    with open(f'{BASE_DIR}/{USER_FINANCE}', 'r') as f:
-        user_finance = json.load(f)
-    df = pd.read_csv(f'{BASE_DIR}/{PROP_SEARCH_WITH_METRICS_FILTERED}')
-    address = df.loc[df["zpid"] == zpid, "Address"].values[0]
-    price = df.loc[df["zpid"] == zpid, "Price"].values[0]
-    irr_u = df.loc[df["zpid"] == zpid, "IRR (unleveraged)"].values[0]
-    irr_l = df.loc[df["zpid"] == zpid, "IRR (leveraged)"].values[0]
-    cap_rate = df.loc[df["zpid"] == zpid, "Cap Rate"].values[0]
-    coc = df.loc[df["zpid"] == zpid, "Cash On Cash Return"].values[0]
+    try:
+        with open(f'{BASE_DIR}/{SELECTED_PROPERTY}', 'rb') as f:
+            zpid = pickle.load(f)
+        with open(f'{BASE_DIR}/{USER_FINANCE}', 'r') as f:
+            user_finance = json.load(f)
+        
+        df = pd.read_csv(f'{BASE_DIR}/{PROP_SEARCH_WITH_METRICS_FILTERED}')
+        
+        # Check if the property exists in the DataFrame
+        property_data = df[df["zpid"] == zpid]
+        if property_data.empty:
+            st.error("Selected property not found in the search results. Please go back to the search page and select a property.")
+            return
+            
+        # Get property details
+        address = property_data["Address"].values[0]
+        price = property_data["Price"].values[0]
+        irr_u = property_data["IRR (unleveraged)"].values[0]
+        irr_l = property_data["IRR (leveraged)"].values[0]
+        cap_rate = property_data["Cap Rate"].values[0]
+        coc = property_data["Cash On Cash Return"].values[0]
 
-    st.markdown("<h1 style='text-align: center; color: black;'>Investment Scenario Analysis</h1>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align: center; color: grey;'>You've selected <strong style='color:red'>{address}</strong> property for this analysis.</p>", unsafe_allow_html=True)
-
-    st.markdown("#")
-    with st.container():
-        # initial metric values based on non-modified assumptions
-        if 'irr_u' not in st.session_state:
-            st.session_state["irr_u"] = irr_u
-        if 'irr_l' not in st.session_state:
-            st.session_state["irr_l"] = irr_l
-        if 'cap_rate' not in st.session_state:
-            st.session_state["cap_rate"] = cap_rate
-        if 'coc' not in st.session_state:
-            st.session_state["coc"] = coc
-        if 'irr_u_delta' not in st.session_state:
-            st.session_state["irr_u_delta"] = 0
-        if 'irr_l_delta' not in st.session_state:
-            st.session_state["irr_l_delta"] = 0
-        if 'cap_rate_delta' not in st.session_state:
-            st.session_state["cap_rate_delta"] = 0
-        if 'coc_delta' not in st.session_state:
-            st.session_state["coc_delta"] = 0
-        if 'cash_flow' not in st.session_state:
-            st.session_state["cash_flow"] = None
-        c1, c2, c3, c4 = st.columns([1,1,1,1])
-        c1.metric("IRR (unleveraged)", f"{st.session_state.irr_u} %", f"{st.session_state.irr_u_delta} %")
-        c2.metric("IRR (leveraged)", f"{st.session_state.irr_l} %", f"{st.session_state.irr_l_delta} %")
-        c3.metric("Cap Rate", f"{st.session_state.cap_rate} %", f"{st.session_state.cap_rate_delta} %")
-        c4.metric("Cash On Cash Return", f"{st.session_state.coc} %", f"{st.session_state.coc_delta} %")
-
-        st.markdown("#")
-        # st.markdown("---")
-        # st.markdown("#")
-    with st.expander("Scenario Description"):
-        # with st.form("Modify Assumptions"):
-        modified_assumptions = {
-            'eqt_pct': user_finance['eqt_pct'],
-            'cash_reserves': user_finance['extra_cash_reserves'],
-            'amort_period': user_finance['amort_period'],
-            'int_rate': user_finance['int_rate_on_debt'],
-            'renov_cost': 3_000,
-            'renov_period': 4,
-            'exit_renov_cost': 3_000,
-            'length_of_hold': 7,
-            'appreciation_rate': 0.02,
-            'vacan_rate': 0.0775,
-            'property_manager_rate': 0.01,
-            'utilities': 40,
-        }
-
-        st.markdown("<h4 style='text-align: center; color: black;'>Modify investment assumptions and hit Submit!</h4>", unsafe_allow_html=True) 
-        with st.container():
-            c1, c2, c3, c4 = st.columns([1,1,1,1])
-            eqt_pct = c1.number_input("Equity Percentage", value=modified_assumptions['eqt_pct'], help="Down payment percentage")
-            cash_reserves = c2.number_input("Cash Reserves", value=modified_assumptions['cash_reserves'])
-            amort_period = c3.number_input("Amortization Period", value=modified_assumptions['amort_period'], help="Mortgage period in years")
-            int_rate = c4.number_input("Interest Rate", value=modified_assumptions['int_rate'], help="Interest rate on the mortgage")
-
-        with st.container():
-            c1, c2, c3, c4 = st.columns([1,1,1,1])
-            renov_cost = c1.number_input("Renovation Cost", value=modified_assumptions['renov_cost'], help="Renovation cost required after the purchase")
-            renov_period = c2.number_input("Renovation Period", value=modified_assumptions['renov_period'], help="How long will the renovation take? (in months)")
-            exit_renov_cost = c3.number_input("Exit Renovation Cost", value=modified_assumptions['exit_renov_cost'], help="How much are planning to spend on renovation at the time of selling?")
-            length_of_hold = c4.number_input("Length of Hold", value=modified_assumptions['length_of_hold'], help="How long will the property be on hold? (in years)")
-
-        with st.container():
-            c1, c2, c3, c4 = st.columns([1,1,1,1])
-            appr_rate = c1.number_input("Appreciation Rate", value=modified_assumptions['appreciation_rate'])
-            vacancy = c2.number_input("Vacancy Rate", value=modified_assumptions['vacan_rate'])
-            prop_manager = c3.number_input("Property Manager Rate", value=modified_assumptions['property_manager_rate'])
-            utilities = c4.number_input("Utilities", value=modified_assumptions['utilities'])
+        st.markdown("<h1 style='text-align: center; color: black;'>Investment Scenario Analysis</h1>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; color: grey;'>You've selected <strong style='color:red'>{address}</strong> property for this analysis.</p>", unsafe_allow_html=True)
 
         st.markdown("#")
         with st.container():
-            c1, c2, c3 = st.columns([4,1,4])
-            with c1:
-                st.write('')
-            with c2:
-                # submit_button = st.form_submit_button("Submit")
-                submit_button = st.button("Submit")
-            with c3:
-                st.write('')
-            if submit_button:
-                modified_assumptions['eqt_pct'] = eqt_pct
-                modified_assumptions['cash_reserves'] = cash_reserves
-                modified_assumptions['amort_period'] = amort_period
-                modified_assumptions['int_rate'] = int_rate
-                modified_assumptions['renov_cost'] = renov_cost
-                modified_assumptions['renov_period'] = renov_period
-                modified_assumptions['exit_renov_cost'] = exit_renov_cost
-                modified_assumptions['length_of_hold'] = length_of_hold
-                modified_assumptions['appreciation_rate'] = appr_rate
-                modified_assumptions['vacan_rate'] = vacancy
-                modified_assumptions['property_manager_rate'] = prop_manager
-                modified_assumptions['utilities'] = utilities
+            # initial metric values based on non-modified assumptions
+            if 'irr_u' not in st.session_state:
+                st.session_state["irr_u"] = irr_u
+            if 'irr_l' not in st.session_state:
+                st.session_state["irr_l"] = irr_l
+            if 'cap_rate' not in st.session_state:
+                st.session_state["cap_rate"] = cap_rate
+            if 'coc' not in st.session_state:
+                st.session_state["coc"] = coc
+            if 'irr_u_delta' not in st.session_state:
+                st.session_state["irr_u_delta"] = 0
+            if 'irr_l_delta' not in st.session_state:
+                st.session_state["irr_l_delta"] = 0
+            if 'cap_rate_delta' not in st.session_state:
+                st.session_state["cap_rate_delta"] = 0
+            if 'coc_delta' not in st.session_state:
+                st.session_state["coc_delta"] = 0
+            if 'cash_flow' not in st.session_state:
+                st.session_state["cash_flow"] = None
+            c1, c2, c3, c4 = st.columns([1,1,1,1])
+            c1.metric("IRR (unleveraged)", f"{st.session_state.irr_u} %", f"{st.session_state.irr_u_delta} %")
+            c2.metric("IRR (leveraged)", f"{st.session_state.irr_l} %", f"{st.session_state.irr_l_delta} %")
+            c3.metric("Cap Rate", f"{st.session_state.cap_rate} %", f"{st.session_state.cap_rate_delta} %")
+            c4.metric("Cash On Cash Return", f"{st.session_state.coc} %", f"{st.session_state.coc_delta} %")
 
-                with open(f'{BASE_DIR}/{USER_ASSUMPTIONS_MODIFIED}', 'wb') as f:
-                    pickle.dump(modified_assumptions, f)
+            st.markdown("#")
+            # st.markdown("---")
+            # st.markdown("#")
+        with st.expander("Scenario Description"):
+            # with st.form("Modify Assumptions"):
+            modified_assumptions = {
+                'eqt_pct': user_finance['eqt_pct'],
+                'cash_reserves': user_finance['extra_cash_reserves'],
+                'amort_period': user_finance['amort_period'],
+                'int_rate': user_finance['int_rate_on_debt'],
+                'renov_cost': 3_000,
+                'renov_period': 4,
+                'exit_renov_cost': 3_000,
+                'length_of_hold': 7,
+                'appreciation_rate': 0.02,
+                'vacan_rate': 0.0775,
+                'property_manager_rate': 0.01,
+                'utilities': 40,
+            }
 
-                # calculating the metrics based on new assumptions
-                irr_u_new, irr_l_new, cap_rate_new, coc_new, cash_flow = update_metrics(modified_assumptions, price, zpid)
+            st.markdown("<h4 style='text-align: center; color: black;'>Modify investment assumptions and hit Submit!</h4>", unsafe_allow_html=True) 
+            with st.container():
+                c1, c2, c3, c4 = st.columns([1,1,1,1])
+                eqt_pct = c1.number_input("Equity Percentage", value=modified_assumptions['eqt_pct'], help="Down payment percentage")
+                cash_reserves = c2.number_input("Cash Reserves", value=modified_assumptions['cash_reserves'])
+                amort_period = c3.number_input("Amortization Period", value=modified_assumptions['amort_period'], help="Mortgage period in years")
+                int_rate = c4.number_input("Interest Rate", value=modified_assumptions['int_rate'], help="Interest rate on the mortgage")
 
-                st.session_state.irr_u_delta = delta_metrics(st.session_state.irr_u, irr_u_new)
-                st.session_state.irr_l_delta = delta_metrics(st.session_state.irr_l, irr_l_new)
-                st.session_state.cap_rate_delta = delta_metrics(st.session_state.cap_rate, cap_rate_new)
-                st.session_state.coc_delta = delta_metrics(st.session_state.coc, coc_new)
-                st.session_state.irr_u = irr_u_new
-                st.session_state.irr_l = irr_l_new
-                st.session_state.cap_rate = cap_rate_new
-                st.session_state.coc = coc_new
-                st.session_state.cash_flow = cash_flow
+            with st.container():
+                c1, c2, c3, c4 = st.columns([1,1,1,1])
+                renov_cost = c1.number_input("Renovation Cost", value=modified_assumptions['renov_cost'], help="Renovation cost required after the purchase")
+                renov_period = c2.number_input("Renovation Period", value=modified_assumptions['renov_period'], help="How long will the renovation take? (in months)")
+                exit_renov_cost = c3.number_input("Exit Renovation Cost", value=modified_assumptions['exit_renov_cost'], help="How much are planning to spend on renovation at the time of selling?")
+                length_of_hold = c4.number_input("Length of Hold", value=modified_assumptions['length_of_hold'], help="How long will the property be on hold? (in years)")
+
+            with st.container():
+                c1, c2, c3, c4 = st.columns([1,1,1,1])
+                appr_rate = c1.number_input("Appreciation Rate", value=modified_assumptions['appreciation_rate'])
+                vacancy = c2.number_input("Vacancy Rate", value=modified_assumptions['vacan_rate'])
+                prop_manager = c3.number_input("Property Manager Rate", value=modified_assumptions['property_manager_rate'])
+                utilities = c4.number_input("Utilities", value=modified_assumptions['utilities'])
+
+            st.markdown("#")
+            with st.container():
+                c1, c2, c3 = st.columns([4,1,4])
+                with c1:
+                    st.write('')
+                with c2:
+                    # submit_button = st.form_submit_button("Submit")
+                    submit_button = st.button("Submit")
+                with c3:
+                    st.write('')
+                if submit_button:
+                    modified_assumptions['eqt_pct'] = eqt_pct
+                    modified_assumptions['cash_reserves'] = cash_reserves
+                    modified_assumptions['amort_period'] = amort_period
+                    modified_assumptions['int_rate'] = int_rate
+                    modified_assumptions['renov_cost'] = renov_cost
+                    modified_assumptions['renov_period'] = renov_period
+                    modified_assumptions['exit_renov_cost'] = exit_renov_cost
+                    modified_assumptions['length_of_hold'] = length_of_hold
+                    modified_assumptions['appreciation_rate'] = appr_rate
+                    modified_assumptions['vacan_rate'] = vacancy
+                    modified_assumptions['property_manager_rate'] = prop_manager
+                    modified_assumptions['utilities'] = utilities
+
+                    with open(f'{BASE_DIR}/{USER_ASSUMPTIONS_MODIFIED}', 'wb') as f:
+                        pickle.dump(modified_assumptions, f)
+
+                    # calculating the metrics based on new assumptions
+                    irr_u_new, irr_l_new, cap_rate_new, coc_new, cash_flow = update_metrics(modified_assumptions, price, zpid)
+
+                    st.session_state.irr_u_delta = delta_metrics(st.session_state.irr_u, irr_u_new)
+                    st.session_state.irr_l_delta = delta_metrics(st.session_state.irr_l, irr_l_new)
+                    st.session_state.cap_rate_delta = delta_metrics(st.session_state.cap_rate, cap_rate_new)
+                    st.session_state.coc_delta = delta_metrics(st.session_state.coc, coc_new)
+                    st.session_state.irr_u = irr_u_new
+                    st.session_state.irr_l = irr_l_new
+                    st.session_state.cap_rate = cap_rate_new
+                    st.session_state.coc = coc_new
+                    st.session_state.cash_flow = cash_flow
+
+    except FileNotFoundError as e:
+        st.error("Required files not found. Please complete the property search process first.")
+        logging.error(f"File not found error: {str(e)}")
+    except Exception as e:
+        st.error("An unexpected error occurred. Please try again or contact support.")
+        logging.error(f"Unexpected error in analysis page: {str(e)}")
 
     st.markdown("#")
     with st.container():

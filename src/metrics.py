@@ -25,7 +25,17 @@ class Metrics:
 
     @classmethod
     def xirr(cls, values, dates):
-        return anderson(lambda r: cls.xnpv(r, values, dates), 0)
+        try:
+            from scipy.optimize._nonlin import NoConvergence
+            try:
+                return anderson(lambda r: cls.xnpv(r, values, dates), 0)
+            except NoConvergence as e:
+                print(f"XIRR calculation failed to converge: {str(e)}")
+                return None
+        except Exception as e:
+            # If any other error occurs
+            print(f"XIRR calculation failed with unexpected error: {str(e)}")
+            return None
 
     @classmethod
     def xirr_dates(cls, dates):

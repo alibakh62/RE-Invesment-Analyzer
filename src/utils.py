@@ -17,6 +17,11 @@ import json
 
 import logging
 
+# Ensure the log directory exists
+log_dir = LOG_DIR
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
 # logdatetime = time.strftime("%m%d%Y_%H%M%S")
 logdatetime = time.strftime("%m%d%Y")
 logging.basicConfig(level=logging.INFO, 
@@ -238,13 +243,13 @@ class DataPrep:
         if self.user_assumptions is None:
             self.get_assumptions()
         params = self.user_assumptions
-        amortization['dates'] = pd.date_range(start=params['purchase_date'], periods=int(12*params['length_of_hold']), freq='M').strftime('%Y-%m-%d').tolist()
+        amortization['dates'] = pd.date_range(start=params['purchase_date'], periods=int(12*params['length_of_hold']), freq='ME').strftime('%Y-%m-%d').tolist()
         amortization['month_numbers'] = [datetime.strptime(d, '%Y-%m-%d').month for d in amortization['dates']]
         amortization['months'] = [i+1 for i in range(len(amortization['month_numbers']))]
         amortization['rate_per_period'] = (1 + params['interest_rate_on_debt']/12)**(12/12) - 1
         amortization['number_of_payments'] = params['amortization_period']*12
         amortization['monthly_payment'] = -np.round(npf.pmt(rate= params['interest_rate_on_debt']/ 12, nper=params['amortization_period'] * 12, pv=params['total_project_loan_amount'], fv=0, when='end'), 2)
-        amortization['amortization_date'] = pd.date_range(start=params['purchase_date'], periods=int(12*params['amortization_period']), freq='M').strftime('%Y-%m-%d').tolist()
+        amortization['amortization_date'] = pd.date_range(start=params['purchase_date'], periods=int(12*params['amortization_period']), freq='ME').strftime('%Y-%m-%d').tolist()
         amortization['payment_no'] = [i+1 for i in range(len(amortization['amortization_date']))]
         amortization['amortization_month'] = [i+1 if i <= len(amortization['months'])-1 else 0 for i in range(len(amortization['amortization_date']))]
         amortization['amortization_interest'] = []
@@ -374,9 +379,13 @@ class DataPrep:
         cash_flow_leveraged = cash_flow['cash_flow_leveraged']
         dates = cash_flow['dates']
         dates_xirr = Metrics.xirr_dates(dates)
-        irr_unleveraged = np.round((Metrics.xirr(values=cash_flow_unleveraged, dates=dates_xirr))*100, 2)
-        irr_leveraged = np.round((Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr))*100, 2)
+        
+        # Calculate IRRs with error handling
+        irr_u = Metrics.xirr(values=cash_flow_unleveraged, dates=dates_xirr)
+        irr_l = Metrics.xirr(values=cash_flow_leveraged, dates=dates_xirr)
+        
+        irr_unleveraged = np.round(irr_u * 100, 2) if irr_u is not None else None
+        irr_leveraged = np.round(irr_l * 100, 2) if irr_l is not None else None
         cap_rate = Metrics.cap_rate(cash_flow['net_rents'], price)
         coc = Metrics.cash_on_cash_return(cash_flow['net_rents'], cash_flow['less_taxes'], cash_flow['cash_invested'])
         return irr_unleveraged, irr_leveraged, cap_rate, coc
-

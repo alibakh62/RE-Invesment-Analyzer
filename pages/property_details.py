@@ -71,74 +71,102 @@ def app():
     """
     This page will show property details info
     """
-    # Setting up the navigation bar
-    selected = option_menu(
-        menu_title=None,
-        options=["Property Details", "Neighborhood", "Tax History", "Property Images"],
-        icons=["house", "geo", "bank", "image"],
-        default_index=0,
-        orientation="horizontal",
-        # for more styling refer to: https://github.com/victoryhb/streamlit-option-menu
-    )
-    # Getting property details info
-    with open(f'{BASE_DIR}/{SELECTED_PROPERTY}', 'rb') as f:
-        zpid = pickle.load(f)
     try:
-        with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}/{str(zpid)}.json", "r") as f:
-                prop_det = json.load(f)
-    except:
-        prop_det = api.property_detail(zpid).json()
-    
-    # Different pages of property details
-    if selected == "Property Details":
-        st.markdown("<h1 style='text-align: center; color: black;'>Property Info</h1>", unsafe_allow_html=True)
-    elif selected == "Neighborhood":
-        st.markdown("<h1 style='text-align: center; color: black;'>Neighborhood</h1>", unsafe_allow_html=True)
-    elif selected == "Tax History":
-        st.markdown("<h1 style='text-align: center; color: black;'>Tax</h1>", unsafe_allow_html=True)
-        tax_paid, prop_value, tax_rate_hist, tax_year = get_tax_history(prop_det)
+        # Load the search results if available
+        df = pd.read_csv(f'{BASE_DIR}/{PROP_SEARCH_WITH_METRICS_FILTERED}')
+        
+        # Create a selection box for properties
+        st.sidebar.markdown("## Select Property")
+        selected_address = st.sidebar.selectbox(
+            "Choose a property to view details:",
+            options=df["Address"].tolist(),
+            index=0 if not df.empty else None
+        )
+        
+        if selected_address:
+            # Get the ZPID for the selected property
+            zpid = df.loc[df["Address"] == selected_address, "zpid"].values[0]
+            
+            # Save the selected property
+            with open(f'{BASE_DIR}/{SELECTED_PROPERTY}', 'wb') as f:
+                pickle.dump(zpid, f)
+        else:
+            st.warning("No properties available. Please perform a search first.")
+            return
+            
+        # Setting up the navigation bar
+        selected = option_menu(
+            menu_title=None,
+            options=["Property Details", "Neighborhood", "Tax History", "Property Images"],
+            icons=["house", "geo", "bank", "image"],
+            default_index=0,
+            orientation="horizontal",
+        )
+        
+        # Getting property details info
+        with open(f'{BASE_DIR}/{SELECTED_PROPERTY}', 'rb') as f:
+            zpid = pickle.load(f)
+        try:
+            with open(f"{BASE_DIR}/{PROP_DETAIL_RESPONSE}/{str(zpid)}.json", "r") as f:
+                    prop_det = json.load(f)
+        except:
+            prop_det = api.property_detail(zpid).json()
+        
+        # Different pages of property details
+        if selected == "Property Details":
+            st.markdown("<h1 style='text-align: center; color: black;'>Property Info</h1>", unsafe_allow_html=True)
+        elif selected == "Neighborhood":
+            st.markdown("<h1 style='text-align: center; color: black;'>Neighborhood</h1>", unsafe_allow_html=True)
+        elif selected == "Tax History":
+            st.markdown("<h1 style='text-align: center; color: black;'>Tax</h1>", unsafe_allow_html=True)
+            tax_paid, prop_value, tax_rate_hist, tax_year = get_tax_history(prop_det)
 
-        st.markdown("#")
-        st.markdown("<h3 style='text-align: center; color: black;'>Tax Paid</h1>", unsafe_allow_html=True)
-        fig = px.line(x=tax_year[::-1], y=tax_paid[::-1], labels={"x": "Year", "y": "Tax ($)"}, text=tax_paid[::-1])
-        fig.update_traces(textposition='top center')
-        # fig.update_layout(title_text='Tax Rate History', title_x=0.5)
-        st.plotly_chart(fig, use_container_width=True)
+            st.markdown("#")
+            st.markdown("<h3 style='text-align: center; color: black;'>Tax Paid</h1>", unsafe_allow_html=True)
+            fig = px.line(x=tax_year[::-1], y=tax_paid[::-1], labels={"x": "Year", "y": "Tax ($)"}, text=tax_paid[::-1])
+            fig.update_traces(textposition='top center')
+            # fig.update_layout(title_text='Tax Rate History', title_x=0.5)
+            st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("#")
-        st.markdown("<h3 style='text-align: center; color: black;'>Tax Rate</h1>", unsafe_allow_html=True)
-        fig = px.line(x=tax_year[::-1], y=tax_rate_hist[::-1], labels={"x": "Year", "y": "Tax Rate"}, text=tax_rate_hist[::-1])
-        fig.update_traces(textposition='top center')
-        # fig.update_layout(title_text='Tax Rate History', title_x=0.5)
-        st.plotly_chart(fig, use_container_width=True)
+            st.markdown("#")
+            st.markdown("<h3 style='text-align: center; color: black;'>Tax Rate</h1>", unsafe_allow_html=True)
+            fig = px.line(x=tax_year[::-1], y=tax_rate_hist[::-1], labels={"x": "Year", "y": "Tax Rate"}, text=tax_rate_hist[::-1])
+            fig.update_traces(textposition='top center')
+            # fig.update_layout(title_text='Tax Rate History', title_x=0.5)
+            st.plotly_chart(fig, use_container_width=True)
 
-        st.markdown("#")
-        st.markdown("<h3 style='text-align: center; color: black;'>Property Value</h1>", unsafe_allow_html=True)
-        fig = px.line(x=tax_year[::-1], y=prop_value[::-1], labels={"x": "Year", "y": "Value ($)"}, text=prop_value[::-1])
-        fig.update_traces(textposition='top center')
-        # fig.update_layout(title_text='Tax Rate History', title_x=0.5)
-        st.plotly_chart(fig, use_container_width=True)
+            st.markdown("#")
+            st.markdown("<h3 style='text-align: center; color: black;'>Property Value</h1>", unsafe_allow_html=True)
+            fig = px.line(x=tax_year[::-1], y=prop_value[::-1], labels={"x": "Year", "y": "Value ($)"}, text=prop_value[::-1])
+            fig.update_traces(textposition='top center')
+            # fig.update_layout(title_text='Tax Rate History', title_x=0.5)
+            st.plotly_chart(fig, use_container_width=True)
 
-    elif selected == "Property Images":
-        image_dir = f"{BASE_DIR}/{PROP_IMAGES}/{str(zpid)}"
-        if not os.path.exists(image_dir):
-            logging.info(f"Initializing image download for {zpid}")
-            images = api.property_image(zpid).json()
-            if len(images["images"]) > 0:
+        elif selected == "Property Images":
+            image_dir = f"{BASE_DIR}/{PROP_IMAGES}/{str(zpid)}"
+            if not os.path.exists(image_dir):
+                logging.info(f"Initializing image download for {zpid}")
+                images = api.property_image(zpid).json()
+                if len(images["images"]) > 0:
+                    for image_url in images['images']:
+                        save_image(image_url, zpid, image_dir)
+                else:
+                    logging.info(f"No images for {zpid}")
+                    st.error(f"No images for {zpid}")
+            elif os.listdir(image_dir) == []:
+                logging.info(f"Initializing image download for {zpid}")
+                images = api.property_image(zpid).json()
                 for image_url in images['images']:
                     save_image(image_url, zpid, image_dir)
             else:
-                logging.info(f"No images for {zpid}")
-                st.error(f"No images for {zpid}")
-        elif os.listdir(image_dir) == []:
-            logging.info(f"Initializing image download for {zpid}")
-            images = api.property_image(zpid).json()
-            for image_url in images['images']:
-                save_image(image_url, zpid, image_dir)
-        else:
-            logging.info(f"Images for {zpid} already downloaded")
-        st.markdown("<h1 style='text-align: center; color: black;'>Images</h1>", unsafe_allow_html=True)
-        list_of_images = os.listdir(image_dir)
-        for image in list_of_images:
-            st.image(f"{image_dir}/{image}")
-        pass
+                logging.info(f"Images for {zpid} already downloaded")
+            st.markdown("<h1 style='text-align: center; color: black;'>Images</h1>", unsafe_allow_html=True)
+            list_of_images = os.listdir(image_dir)
+            for image in list_of_images:
+                st.image(f"{image_dir}/{image}")
+            pass
+    except FileNotFoundError:
+        st.error("No search results found. Please perform a property search first.")
+    except Exception as e:
+        st.error("An unexpected error occurred. Please try again.")
+        logging.error(f"Error in property details page: {str(e)}")

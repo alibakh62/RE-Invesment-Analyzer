@@ -1,6 +1,10 @@
 import requests
 import json
 import time
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 def property_search(query):
     # extended property search
@@ -25,7 +29,7 @@ def property_search(query):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "<your API key>"
+        "X-RapidAPI-Key": os.getenv("RAPIDAPI_ZILLOW_API_KEY") #"<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -41,7 +45,7 @@ def property_detail(zpid):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "<your API key>"
+        "X-RapidAPI-Key": os.getenv("RAPIDAPI_ZILLOW_API_KEY") #"<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -56,7 +60,7 @@ def property_image(zpid):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "<your API key>"
+        "X-RapidAPI-Key": os.getenv("RAPIDAPI_ZILLOW_API_KEY") #"<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -71,7 +75,7 @@ def rent_estimate(property_type, address, beds=3, baths=2):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "<your API key>"
+        "X-RapidAPI-Key": os.getenv("RAPIDAPI_ZILLOW_API_KEY") #"<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)
@@ -86,7 +90,7 @@ def search_by_mls(mls_number):
 
     headers = {
         "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
-        "X-RapidAPI-Key": "<your API key>"
+        "X-RapidAPI-Key": os.getenv("RAPIDAPI_ZILLOW_API_KEY") #"<your API key>"
     }
 
     response = requests.request("GET", url, headers=headers, params=querystring)

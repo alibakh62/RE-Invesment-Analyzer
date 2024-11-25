@@ -1,12 +1,17 @@
-import pages.analysis
-import pages.analysis_deprecated
-import pages.analysis_multiple
-import pages.default_assumptions
-import pages.property_details
-import pages.investment_criteria_deprecated
-import pages.investment_criteria
-import pages.search
-import pages.search_deprecated
+import sys
+
+sys.path.insert(0, '.')
+sys.path.insert(0, '...')
+
+from pages import analysis
+from pages import analysis_deprecated
+from pages import analysis_multiple
+from pages import default_assumptions
+from pages import property_details
+from pages import investment_criteria_deprecated
+from pages import investment_criteria
+from pages import search
+from pages import search_deprecated
 from streamlit_option_menu import option_menu
 
 import streamlit as st
@@ -46,17 +51,17 @@ if True:
 
     PAGES = {
         # "Default Assumptions": pages.default_assumptions.app,
-        "Investment Criteria": pages.investment_criteria.app,
+        "Investment Criteria": investment_criteria.app,
         # "Investment Criteria_deprecated": pages.investment_criteria_deprecated.app,
         # "Review Assumptions": pages.investment_criteria_tmp.app,
-        "Search": pages.search.app,
+        "Search": search.app,
         # "Search_deprecated": pages.search_deprecated.app,
-        "Property Details": pages.property_details.app,
+        "Property Details": property_details.app,
         # "Property Investment Worksheet": pages.search.app,
-        "Scenario Analysis": pages.analysis.app,
-        "Scenario Analysis 1+": pages.analysis_multiple.app,
+        "Scenario Analysis": analysis.app,
+        "Scenario Analysis 1+": analysis_multiple.app,
         # "Scenario Analysis-deprecated": pages.analysis_deprecated.app,
-        "Comparative Analysis": pages.analysis.app,
+        "Comparative Analysis": analysis.app,
     }
 
     with st.sidebar:

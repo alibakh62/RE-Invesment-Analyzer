@@ -9,3 +9,5 @@ logs
 *.json
 *.csv
 secrets.toml
+realestate-app-venv
+.env

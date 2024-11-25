@@ -189,10 +189,18 @@ def app():
         # query API
         if st.session_state.GET_FROM_API:
             response = api.property_search(query)
+            response_json = response.json()
+            
             # storing the response for further use
             with open(f'{BASE_DIR}/{PROP_SEARCH_RESPONSE}', 'w') as f:
-                json.dump(response.json(), f)
-            df = pd.json_normalize(response.json()['props'])
+                json.dump(response_json, f)
+            
+            # Check if response contains properties
+            if 'props' not in response_json or not response_json['props']:
+                st.error("No properties found matching your criteria. Try adjusting your search parameters.")
+                return
+                
+            df = pd.json_normalize(response_json['props'])
             df.to_csv(os.path.join(BASE_DIR, PROP_SEARCH), index=False)
         else:
             df = pd.read_csv(os.path.join(BASE_DIR, PROP_SEARCH))
