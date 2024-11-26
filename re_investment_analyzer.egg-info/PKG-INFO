@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: re-investment-analyzer
+Version: 0.1.0
+Requires-Python: >=3.8
+Requires-Dist: requests>=2.25.1
+Requires-Dist: pandas>=1.2.0
+Requires-Dist: numpy>=1.19.0
